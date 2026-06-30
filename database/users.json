@@ -3,5 +3,10 @@
         "password_hash": "d9846a2f4990eef991a079bad99ba39183c79760a4fee0f0e82e1402cdb431ed",
         "created_at": "2026-06-30 19:44:37",
         "last_login": "2026-06-30 19:44:37"
+    },
+    "tester": {
+        "password_hash": "3bc9cc16b85c8c8b172720c7378dd048ce6a12a9ca6abf1181dc3f8caf8e1837",
+        "created_at": "2026-06-30 20:16:02",
+        "last_login": "2026-06-30 20:16:02"
     }
 }

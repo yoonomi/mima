@@ -2,20 +2,19 @@
 Secure_AES_System - 基于对称密码体系的数据加密解密系统
 主程序入口，提供命令行交互菜单
 
-作者: [学号] [姓名]
+作者: 2023337621104 金科丞
 日期: 2026-06-30
 """
 
 import os
 import sys
-import base64
 
 # 确保项目根目录在系统路径中
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from config import (
     ROOT_DIR, TEST_DATA_DIR, ENCRYPTED_DIR, DECRYPTED_DIR,
-    REPORTS_DIR, AES_DEFAULT_MODE, AES_DEFAULT_KEY_SIZE,
+    REPORTS_DIR,
 )
 from logs.logger import log_operation, get_recent_logs
 from core.key_manager import KeyManager
@@ -26,14 +25,13 @@ from auth.login import Login
 from auth.register import Register
 from file_system.file_encrypt import encrypt_single_file
 from file_system.file_decrypt import decrypt_single_file
-from file_system.batch_encrypt import batch_encrypt_files, batch_encrypt_directory
-from file_system.batch_decrypt import batch_decrypt_files, batch_decrypt_directory
+from file_system.batch_encrypt import batch_encrypt_files
+from file_system.batch_decrypt import batch_decrypt_files
 from file_system.file_utils import format_file_size, list_files
 from integrity.file_hash import compute_file_hashes, get_hash_records
 from integrity.hash_compare import compare_files
 from integrity.integrity_report import generate_integrity_report
 from performance.performance_report import generate_performance_report
-from performance.compare_test import get_comparison_summary
 
 
 def clear_screen():
@@ -167,6 +165,12 @@ def login_menu(login: Login, register: Register) -> bool:
             username = input("用户名: ").strip()
             password = input("密码: ").strip()
             confirm = input("确认密码: ").strip()
+
+            # 校验两次密码是否一致
+            if password != confirm:
+                print("\n[✗] 两次输入的密码不一致，请重新输入。")
+                wait_for_enter()
+                continue
 
             # 显示密码强度
             strength = check_password_strength(password)
@@ -808,10 +812,6 @@ def main():
 
     # 进入主菜单
     main_menu(login)
-
-    # 重新运行
-    if __name__ == '__main__':
-        main()
 
 
 if __name__ == '__main__':
