@@ -1,0 +1,22 @@
+[
+    {
+        "file_path": "test_data/small.txt",
+        "file_name": "small.txt",
+        "file_size": 303,
+        "file_size_fmt": "303 B",
+        "md5": "f089a641dd17155e9ef54317df36c27c",
+        "sha1": "a05faf7446c35d1390f530021b1050bce484cbcd",
+        "sha256": "16b4827ba138ca71a5959b840cf61043213ee3e29c9be12508e5ecd15ab7c945",
+        "timestamp": "2026-06-30 19:44:52"
+    },
+    {
+        "file_path": "test_data/small.txt",
+        "file_name": "small.txt",
+        "file_size": 303,
+        "file_size_fmt": "303 B",
+        "md5": "f089a641dd17155e9ef54317df36c27c",
+        "sha1": "a05faf7446c35d1390f530021b1050bce484cbcd",
+        "sha256": "16b4827ba138ca71a5959b840cf61043213ee3e29c9be12508e5ecd15ab7c945",
+        "timestamp": "2026-06-30 19:44:52"
+    }
+]

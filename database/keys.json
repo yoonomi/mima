@@ -1,0 +1,31 @@
+{
+    "MyAESKey": {
+        "name": "MyAESKey",
+        "algorithm": "AES",
+        "key_size": 256,
+        "key_b64": "z0M+dNBngWPbyeuEwhEEBsz9HiVbVoRW83YQFC7tZHo=",
+        "created": "2026-06-30 19:44:37"
+    },
+    "ImportedAES": {
+        "name": "ImportedAES",
+        "algorithm": "AES",
+        "key_size": 256,
+        "key_b64": "z0M+dNBngWPbyeuEwhEEBsz9HiVbVoRW83YQFC7tZHo=",
+        "created": "2026-06-30 19:44:37",
+        "imported": true
+    },
+    "TestKey": {
+        "name": "TestKey",
+        "algorithm": "AES",
+        "key_size": 256,
+        "key_b64": "AwcdZFuwZQv6fQpzse5Sk2uxiCTouxEztDEywF/dDdg=",
+        "created": "2026-06-30 19:44:46"
+    },
+    "DesTestKey": {
+        "name": "DesTestKey",
+        "algorithm": "DES",
+        "key_size": 56,
+        "key_b64": "BHnyZboJ0A8=",
+        "created": "2026-06-30 19:44:46"
+    }
+}

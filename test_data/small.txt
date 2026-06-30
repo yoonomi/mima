@@ -1,0 +1,5 @@
+这是一个用于 AES/DES 加密系统测试的小文件。
+Secure AES Encryption System Test File (Small)
+2026-06-30
+This file is used to test the encryption and decryption functionality of the system.
+内容包含中英文混合文本，用于测试加密算法对不同编码的处理能力。

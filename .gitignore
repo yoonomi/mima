@@ -1,0 +1,29 @@
+# Python缓存
+__pycache__/
+*.pyc
+*.pyo
+
+# 虚拟环境
+venv/
+env/
+.venv/
+
+# IDE
+.vscode/
+.idea/
+
+# 系统文件
+Thumbs.db
+.DS_Store
+
+# 数据库文件（可根据需要决定是否排除）
+# database/*.json
+
+# 输出文件（保留目录结构）
+encrypted/*
+!encrypted/.gitkeep
+decrypted/*
+!decrypted/.gitkeep
+reports/*
+!reports/.gitkeep
+logs/*.log
