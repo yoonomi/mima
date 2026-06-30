@@ -1,0 +1,760 @@
+"""
+图形界面主程序 - Tkinter 桌面可视化
+提供加密、解密、密钥管理、性能测试(含Matplotlib图表)、完整性校验功能
+"""
+
+import os
+import sys
+import tkinter as tk
+from tkinter import ttk, filedialog, messagebox, scrolledtext
+from tkinter.font import Font
+from threading import Thread
+from datetime import datetime
+
+# 确保项目根目录在路径中
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+
+from config import TEST_DATA_DIR, ENCRYPTED_DIR, DECRYPTED_DIR, REPORTS_DIR
+from core.aes_crypto import get_supported_modes as aes_modes, generate_key as aes_gen_key
+from core.des_crypto import get_supported_modes as des_modes, generate_key as des_gen_key
+from core.key_manager import KeyManager
+from core.password_checker import check_password_strength, generate_strong_password
+from file_system.file_encrypt import encrypt_single_file
+from file_system.file_decrypt import decrypt_single_file
+from file_system.file_utils import format_file_size, list_files
+from integrity.file_hash import compute_file_hashes
+from integrity.hash_compare import compare_files
+from integrity.integrity_report import generate_integrity_report
+from performance.aes_benchmark import run_aes_benchmark
+from performance.des_benchmark import run_des_benchmark
+from performance.performance_report import generate_performance_report
+
+
+class SecureAESGUI:
+    """Secure AES 系统图形界面主窗口"""
+
+    def __init__(self):
+        self.root = tk.Tk()
+        self.root.title("Secure AES 加密系统 - v1.0")
+        self.root.geometry("900x650")
+        self.root.minsize(800, 580)
+
+        # 设置图标（如果有）
+        try:
+            self.root.iconbitmap(default='')
+        except Exception:
+            pass
+
+        # 颜色方案
+        self.colors = {
+            'bg': '#f0f0f0',
+            'header': '#2c3e50',
+            'accent': '#3498db',
+            'success': '#27ae60',
+            'danger': '#e74c3c',
+            'warning': '#f39c12',
+        }
+        self.root.configure(bg=self.colors['bg'])
+
+        # 密钥管理器
+        self.km = KeyManager()
+
+        # 当前使用的密钥
+        self.current_key = None
+        self.current_key_name = None
+        self.current_algorithm = 'AES'
+        self.current_mode = 'CBC'
+
+        # 构建界面
+        self._build_header()
+        self._build_notebook()
+        self._build_status_bar()
+
+        # 退出确认
+        self.root.protocol("WM_DELETE_WINDOW", self._on_close)
+
+    # ─── 标题栏 ───
+
+    def _build_header(self):
+        """构建标题栏"""
+        header = tk.Frame(self.root, bg=self.colors['header'], height=60)
+        header.pack(fill=tk.X, side=tk.TOP)
+        header.pack_propagate(False)
+
+        title_font = Font(family="Microsoft YaHei", size=16, weight="bold")
+        tk.Label(header, text="Secure AES 加密系统",
+                 fg='white', bg=self.colors['header'],
+                 font=title_font).pack(side=tk.LEFT, padx=20, pady=12)
+
+        sub_font = Font(family="Microsoft YaHei", size=9)
+        tk.Label(header, text="2023337621104 金科丞 | 基于对称密码体系的数据加密解密",
+                 fg='#bdc3c7', bg=self.colors['header'],
+                 font=sub_font).pack(side=tk.RIGHT, padx=20, pady=15)
+
+    # ─── 选项卡 ───
+
+    def _build_notebook(self):
+        """构建选项卡面板"""
+        self.notebook = ttk.Notebook(self.root)
+        self.notebook.pack(fill=tk.BOTH, expand=True, padx=8, pady=(8, 0))
+
+        # 创建各选项卡
+        self._create_encrypt_tab()
+        self._create_decrypt_tab()
+        self._create_key_tab()
+        self._create_performance_tab()
+        self._create_integrity_tab()
+
+    # ═══════════════════════════════════════
+    #  选项卡1：文件加密
+    # ═══════════════════════════════════════
+
+    def _create_encrypt_tab(self):
+        """创建加密选项卡"""
+        tab = ttk.Frame(self.notebook)
+        self.notebook.add(tab, text=" 文件加密 ")
+
+        # 左右分栏
+        left = ttk.LabelFrame(tab, text="加密设置", padding=10)
+        left.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=5, pady=5)
+        right = ttk.LabelFrame(tab, text="加密结果", padding=10)
+        right.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True, padx=5, pady=5)
+
+        # ── 左侧：设置 ──
+        row = 0
+        ttk.Label(left, text="选择文件:").grid(row=row, column=0, sticky=tk.W, pady=4)
+        self.enc_file_var = tk.StringVar()
+        ttk.Entry(left, textvariable=self.enc_file_var, width=35).grid(row=row, column=1, padx=5)
+        ttk.Button(left, text="浏览", command=self._browse_encrypt_file).grid(row=row, column=2)
+        row += 1
+
+        ttk.Label(left, text="加密算法:").grid(row=row, column=0, sticky=tk.W, pady=4)
+        self.enc_algo_var = tk.StringVar(value='AES')
+        algo_frame = ttk.Frame(left)
+        algo_frame.grid(row=row, column=1, columnspan=2, sticky=tk.W)
+        ttk.Radiobutton(algo_frame, text="AES", variable=self.enc_algo_var,
+                        value='AES', command=self._on_algo_change).pack(side=tk.LEFT)
+        ttk.Radiobutton(algo_frame, text="DES", variable=self.enc_algo_var,
+                        value='DES', command=self._on_algo_change).pack(side=tk.LEFT, padx=10)
+        row += 1
+
+        ttk.Label(left, text="加密模式:").grid(row=row, column=0, sticky=tk.W, pady=4)
+        self.enc_mode_var = tk.StringVar(value='CBC')
+        self.enc_mode_combo = ttk.Combobox(left, textvariable=self.enc_mode_var,
+                                           values=aes_modes(), state='readonly', width=15)
+        self.enc_mode_combo.grid(row=row, column=1, sticky=tk.W, padx=5)
+        row += 1
+
+        ttk.Label(left, text="密钥:").grid(row=row, column=0, sticky=tk.W, pady=4)
+        self.enc_key_var = tk.StringVar(value='(自动生成)')
+        ttk.Label(left, textvariable=self.enc_key_var, foreground='#555').grid(
+            row=row, column=1, columnspan=2, sticky=tk.W, padx=5)
+        row += 1
+
+        ttk.Label(left, text="AES密钥长度:").grid(row=row, column=0, sticky=tk.W, pady=4)
+        self.enc_keysize_var = tk.StringVar(value='256')
+        ks_frame = ttk.Frame(left)
+        ks_frame.grid(row=row, column=1, columnspan=2, sticky=tk.W)
+        for ks in ['128', '192', '256']:
+            ttk.Radiobutton(ks_frame, text=ks+'位', variable=self.enc_keysize_var,
+                            value=ks).pack(side=tk.LEFT)
+        row += 1
+
+        ttk.Button(left, text="开始加密", command=self._do_encrypt,
+                   style='Accent.TButton').grid(row=row, column=0, columnspan=3, pady=15)
+
+        # ── 右侧：结果 ──
+        self.enc_result_text = scrolledtext.ScrolledText(right, width=45, height=22,
+                                                         font=('Consolas', 9))
+        self.enc_result_text.pack(fill=tk.BOTH, expand=True)
+
+    def _browse_encrypt_file(self):
+        """浏览要加密的文件"""
+        path = filedialog.askopenfilename(title="选择要加密的文件")
+        if path:
+            self.enc_file_var.set(path)
+
+    def _on_algo_change(self):
+        """算法切换时更新模式选项"""
+        algo = self.enc_algo_var.get()
+        modes = aes_modes() if algo == 'AES' else des_modes()
+        self.enc_mode_combo['values'] = modes
+        self.enc_mode_var.set('CBC' if 'CBC' in modes else modes[0])
+
+    def _do_encrypt(self):
+        """执行加密操作"""
+        filepath = self.enc_file_var.get()
+        if not filepath or not os.path.exists(filepath):
+            messagebox.showerror("错误", "请选择有效的文件")
+            return
+
+        algo = self.enc_algo_var.get()
+        mode = self.enc_mode_var.get()
+        key_size = int(self.enc_keysize_var.get()) if algo == 'AES' else 56
+
+        # 生成或使用已有密钥
+        if algo == 'AES':
+            key_info = self.km.generate_aes_key(key_size)
+            key = self.km.get_key(key_info['name'])
+            self.current_key_name = key_info['name']
+        else:
+            key_info = self.km.generate_des_key()
+            key = self.km.get_key(key_info['name'])
+            self.current_key_name = key_info['name']
+
+        self.enc_key_var.set(self.current_key_name)
+
+        def task():
+            try:
+                result = encrypt_single_file(filepath, algo, mode, key, key_size=key_size)
+                self.root.after(0, lambda: self._show_encrypt_result(result))
+            except Exception as e:
+                self.root.after(0, lambda: messagebox.showerror("加密失败", str(e)))
+
+        Thread(target=task, daemon=True).start()
+        self.enc_result_text.insert(tk.END, "加密中，请稍候...\n")
+
+    def _show_encrypt_result(self, result):
+        """显示加密结果"""
+        self.enc_result_text.delete(1.0, tk.END)
+        self.enc_result_text.insert(tk.END, "=" * 40 + "\n")
+        self.enc_result_text.insert(tk.END, "  加密成功 ✓\n")
+        self.enc_result_text.insert(tk.END, "=" * 40 + "\n\n")
+        self.enc_result_text.insert(tk.END, f"原文件:   {os.path.basename(result['input_file'])}\n")
+        self.enc_result_text.insert(tk.END, f"原大小:   {result['original_size_fmt']}\n")
+        self.enc_result_text.insert(tk.END, f"加密后:   {os.path.basename(result['output_file'])}\n")
+        self.enc_result_text.insert(tk.END, f"加密大小: {result['encrypted_size_fmt']}\n")
+        self.enc_result_text.insert(tk.END, f"算法:     {result['algorithm']}\n")
+        self.enc_result_text.insert(tk.END, f"模式:     {result['mode']}\n")
+        self.enc_result_text.insert(tk.END, f"密钥:     {self.current_key_name}\n")
+
+    # ═══════════════════════════════════════
+    #  选项卡2：文件解密
+    # ═══════════════════════════════════════
+
+    def _create_decrypt_tab(self):
+        """创建解密选项卡"""
+        tab = ttk.Frame(self.notebook)
+        self.notebook.add(tab, text=" 文件解密 ")
+
+        left = ttk.LabelFrame(tab, text="解密设置", padding=10)
+        left.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=5, pady=5)
+        right = ttk.LabelFrame(tab, text="解密结果", padding=10)
+        right.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True, padx=5, pady=5)
+
+        # 左侧
+        row = 0
+        ttk.Label(left, text="加密文件:").grid(row=row, column=0, sticky=tk.W, pady=4)
+        self.dec_file_var = tk.StringVar()
+        ttk.Entry(left, textvariable=self.dec_file_var, width=35).grid(row=row, column=1, padx=5)
+        ttk.Button(left, text="浏览", command=self._browse_decrypt_file).grid(row=row, column=2)
+        row += 1
+
+        ttk.Label(left, text="解密算法:").grid(row=row, column=0, sticky=tk.W, pady=4)
+        self.dec_algo_var = tk.StringVar(value='AES')
+        ttk.Combobox(left, textvariable=self.dec_algo_var,
+                     values=['AES', 'DES'], state='readonly', width=15).grid(
+            row=row, column=1, sticky=tk.W, padx=5)
+        row += 1
+
+        ttk.Label(left, text="加密模式:").grid(row=row, column=0, sticky=tk.W, pady=4)
+        self.dec_mode_var = tk.StringVar(value='CBC')
+        self.dec_mode_combo = ttk.Combobox(left, textvariable=self.dec_mode_var,
+                                           values=aes_modes(), state='readonly', width=15)
+        self.dec_mode_combo.grid(row=row, column=1, sticky=tk.W, padx=5)
+        row += 1
+
+        def on_dec_algo_change(*args):
+            algo = self.dec_algo_var.get()
+            modes = aes_modes() if algo == 'AES' else des_modes()
+            self.dec_mode_combo['values'] = modes
+            self.dec_mode_var.set('CBC' if 'CBC' in modes else modes[0])
+        self.dec_algo_var.trace_add('write', on_dec_algo_change)
+
+        ttk.Label(left, text="选择密钥:").grid(row=row, column=0, sticky=tk.W, pady=4)
+        self.dec_key_var = tk.StringVar()
+        self.dec_key_combo = ttk.Combobox(left, textvariable=self.dec_key_var,
+                                          values=self._get_key_names(), state='readonly', width=30)
+        self.dec_key_combo.grid(row=row, column=1, columnspan=2, sticky=tk.W, padx=5)
+        row += 1
+
+        ttk.Button(left, text="开始解密", command=self._do_decrypt,
+                   style='Accent.TButton').grid(row=row, column=0, columnspan=3, pady=15)
+
+        # 右侧
+        self.dec_result_text = scrolledtext.ScrolledText(right, width=45, height=22,
+                                                         font=('Consolas', 9))
+        self.dec_result_text.pack(fill=tk.BOTH, expand=True)
+
+    def _browse_decrypt_file(self):
+        path = filedialog.askopenfilename(title="选择要解密的文件")
+        if path:
+            self.dec_file_var.set(path)
+
+    def _get_key_names(self):
+        keys = self.km.list_keys()
+        return list(keys.keys()) if keys else ['(无可用密钥)']
+
+    def _do_decrypt(self):
+        filepath = self.dec_file_var.get()
+        if not filepath or not os.path.exists(filepath):
+            messagebox.showerror("错误", "请选择有效的加密文件")
+            return
+
+        algo = self.dec_algo_var.get()
+        mode = self.dec_mode_var.get()
+        key_name = self.dec_key_var.get()
+
+        if not key_name or key_name == '(无可用密钥)':
+            messagebox.showerror("错误", "请选择有效的密钥")
+            return
+
+        key = self.km.get_key(key_name)
+        if key is None:
+            messagebox.showerror("错误", "密钥无效")
+            return
+
+        def task():
+            try:
+                result = decrypt_single_file(filepath, key, algo, mode)
+                self.root.after(0, lambda: self._show_decrypt_result(result))
+            except Exception as e:
+                self.root.after(0, lambda: messagebox.showerror("解密失败", str(e)))
+
+        Thread(target=task, daemon=True).start()
+        self.dec_result_text.insert(tk.END, "解密中，请稍候...\n")
+
+    def _show_decrypt_result(self, result):
+        self.dec_result_text.delete(1.0, tk.END)
+        self.dec_result_text.insert(tk.END, "=" * 40 + "\n")
+        self.dec_result_text.insert(tk.END, "  解密成功 ✓\n")
+        self.dec_result_text.insert(tk.END, "=" * 40 + "\n\n")
+        self.dec_result_text.insert(tk.END, f"加密文件:  {os.path.basename(result['input_file'])}\n")
+        self.dec_result_text.insert(tk.END, f"密文大小:  {result['encrypted_size_fmt']}\n")
+        self.dec_result_text.insert(tk.END, f"解密文件:  {os.path.basename(result['output_file'])}\n")
+        self.dec_result_text.insert(tk.END, f"解密大小:  {result['decrypted_size_fmt']}\n")
+        self.dec_result_text.insert(tk.END, f"算法:      {result['algorithm']}\n")
+        self.dec_result_text.insert(tk.END, f"模式:      {result['mode']}\n")
+
+    # ═══════════════════════════════════════
+    #  选项卡3：密钥管理
+    # ═══════════════════════════════════════
+
+    def _create_key_tab(self):
+        """创建密钥管理选项卡"""
+        tab = ttk.Frame(self.notebook)
+        self.notebook.add(tab, text=" 密钥管理 ")
+
+        # 上半：操作区
+        op_frame = ttk.LabelFrame(tab, text="密钥操作", padding=10)
+        op_frame.pack(fill=tk.X, padx=5, pady=5)
+
+        ttk.Button(op_frame, text="生成AES-128密钥", command=lambda: self._gen_key('AES', 128)).pack(side=tk.LEFT, padx=5)
+        ttk.Button(op_frame, text="生成AES-256密钥", command=lambda: self._gen_key('AES', 256)).pack(side=tk.LEFT, padx=5)
+        ttk.Button(op_frame, text="生成DES密钥", command=lambda: self._gen_key('DES', 56)).pack(side=tk.LEFT, padx=5)
+        ttk.Button(op_frame, text="刷新列表", command=self._refresh_key_list).pack(side=tk.RIGHT, padx=5)
+
+        # 下半：密钥列表
+        list_frame = ttk.LabelFrame(tab, text="已保存密钥", padding=10)
+        list_frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+
+        columns = ('name', 'algorithm', 'key_size', 'created')
+        self.key_tree = ttk.Treeview(list_frame, columns=columns, show='headings', height=10)
+        self.key_tree.heading('name', text='密钥名称')
+        self.key_tree.heading('algorithm', text='算法')
+        self.key_tree.heading('key_size', text='密钥长度')
+        self.key_tree.heading('created', text='创建时间')
+        self.key_tree.column('name', width=200)
+        self.key_tree.column('algorithm', width=80)
+        self.key_tree.column('key_size', width=100)
+        self.key_tree.column('created', width=160)
+        self.key_tree.pack(fill=tk.BOTH, expand=True, side=tk.LEFT)
+
+        scrollbar = ttk.Scrollbar(list_frame, orient=tk.VERTICAL, command=self.key_tree.yview)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        self.key_tree.configure(yscrollcommand=scrollbar.set)
+
+        btn_frame = ttk.Frame(list_frame)
+        btn_frame.pack(fill=tk.X, pady=5)
+        ttk.Button(btn_frame, text="删除选中密钥",
+                   command=self._delete_selected_key).pack(side=tk.LEFT, padx=5)
+        ttk.Button(btn_frame, text="导出Base64",
+                   command=self._export_key).pack(side=tk.LEFT, padx=5)
+
+        self._refresh_key_list()
+
+    def _gen_key(self, algo, key_size):
+        try:
+            if algo == 'AES':
+                info = self.km.generate_aes_key(key_size)
+            else:
+                info = self.km.generate_des_key()
+            messagebox.showinfo("成功", f"密钥已生成: {info['name']}")
+            self._refresh_key_list()
+        except Exception as e:
+            messagebox.showerror("错误", str(e))
+
+    def _refresh_key_list(self):
+        for item in self.key_tree.get_children():
+            self.key_tree.delete(item)
+        keys = self.km.list_keys()
+        for name, info in keys.items():
+            self.key_tree.insert('', tk.END, values=(
+                name, info['algorithm'], f"{info['key_size']}位", info['created']
+            ))
+
+    def _delete_selected_key(self):
+        selected = self.key_tree.selection()
+        if not selected:
+            messagebox.showwarning("提示", "请先选择要删除的密钥")
+            return
+        name = self.key_tree.item(selected[0])['values'][0]
+        if messagebox.askyesno("确认", f"确定删除密钥 '{name}' 吗？"):
+            self.km.delete_key(name)
+            self._refresh_key_list()
+
+    def _export_key(self):
+        selected = self.key_tree.selection()
+        if not selected:
+            messagebox.showwarning("提示", "请先选择要导出的密钥")
+            return
+        name = self.key_tree.item(selected[0])['values'][0]
+        b64 = self.km.export_key(name)
+        if b64:
+            messagebox.showinfo("导出密钥", f"密钥 {name} 的Base64编码:\n\n{b64}")
+
+    # ═══════════════════════════════════════
+    #  选项卡4：性能测试 + Matplotlib图表
+    # ═══════════════════════════════════════
+
+    def _create_performance_tab(self):
+        """创建性能测试选项卡（含Matplotlib图表）"""
+        tab = ttk.Frame(self.notebook)
+        self.notebook.add(tab, text=" 性能测试 ")
+
+        # 顶部控制区
+        ctrl_frame = ttk.Frame(tab)
+        ctrl_frame.pack(fill=tk.X, padx=5, pady=5)
+
+        ttk.Label(ctrl_frame, text="测试数据:").pack(side=tk.LEFT)
+        self.perf_file_var = tk.StringVar()
+        ttk.Entry(ctrl_frame, textvariable=self.perf_file_var, width=30).pack(side=tk.LEFT, padx=5)
+        ttk.Button(ctrl_frame, text="选择文件", command=self._browse_perf_file).pack(side=tk.LEFT, padx=2)
+        ttk.Button(ctrl_frame, text="使用小文件", command=self._use_small_file).pack(side=tk.LEFT, padx=2)
+        ttk.Button(ctrl_frame, text="开始测试", command=self._run_performance,
+                   style='Accent.TButton').pack(side=tk.RIGHT, padx=5)
+
+        # Matplotlib 图表区域
+        self._init_matplotlib(tab)
+
+        # 结果显示
+        self.perf_result_text = scrolledtext.ScrolledText(tab, height=8, font=('Consolas', 9))
+        self.perf_result_text.pack(fill=tk.BOTH, padx=5, pady=(0, 5))
+
+    def _init_matplotlib(self, parent):
+        """初始化 Matplotlib 图表"""
+        try:
+            from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+            from matplotlib.figure import Figure
+            import matplotlib
+            matplotlib.rcParams['font.sans-serif'] = ['Microsoft YaHei', 'SimHei', 'DejaVu Sans']
+            matplotlib.rcParams['axes.unicode_minus'] = False
+
+            self.mpl_fig = Figure(figsize=(8, 3.8), dpi=100)
+            self.mpl_fig.subplots_adjust(hspace=0.4, wspace=0.3)
+
+            # 加密速度子图
+            self.ax_enc = self.mpl_fig.add_subplot(121)
+            # 解密速度子图
+            self.ax_dec = self.mpl_fig.add_subplot(122)
+
+            self.mpl_canvas = FigureCanvasTkAgg(self.mpl_fig, master=parent)
+            self.mpl_canvas.get_tk_widget().pack(fill=tk.BOTH, padx=5, pady=5)
+
+            # 初始空白图表
+            self._draw_empty_chart()
+
+        except ImportError:
+            # Matplotlib未安装时显示提示
+            frame = ttk.LabelFrame(parent, text="Matplotlib 图表")
+            frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+            ttk.Label(frame, text="需要安装 matplotlib:\npip install matplotlib",
+                      foreground='red', font=('Microsoft YaHei', 12)).pack(expand=True)
+
+            self.mpl_canvas = None
+
+    def _draw_empty_chart(self):
+        """绘制空白图表"""
+        if not hasattr(self, 'mpl_canvas') or self.mpl_canvas is None:
+            return
+        self.ax_enc.clear()
+        self.ax_dec.clear()
+        self.ax_enc.set_title('加密速度 (MB/s) - 等待测试...')
+        self.ax_dec.set_title('解密速度 (MB/s) - 等待测试...')
+        self.ax_enc.bar([0], [0], color='#ddd')
+        self.ax_dec.bar([0], [0], color='#ddd')
+        self.mpl_canvas.draw()
+
+    def _browse_perf_file(self):
+        path = filedialog.askopenfilename(title="选择性能测试文件")
+        if path:
+            self.perf_file_var.set(path)
+
+    def _use_small_file(self):
+        small = os.path.join(TEST_DATA_DIR, 'small.txt')
+        if os.path.exists(small):
+            self.perf_file_var.set(small)
+        else:
+            messagebox.showwarning("提示", "测试文件不存在")
+
+    def _run_performance(self):
+        """运行性能测试并绘制图表"""
+        filepath = self.perf_file_var.get()
+        if filepath and os.path.exists(filepath):
+            with open(filepath, 'rb') as f:
+                data = f.read()
+        else:
+            # 使用默认测试数据
+            data = b'Secure AES Performance Test Data - ' * 1000
+
+        self.perf_result_text.delete(1.0, tk.END)
+        self.perf_result_text.insert(tk.END, f"测试数据大小: {format_file_size(len(data))}\n")
+        self.perf_result_text.insert(tk.END, "正在测试，请稍候...\n")
+
+        def task():
+            try:
+                # 运行测试
+                aes_results = run_aes_benchmark(data, modes=['ECB', 'CBC', 'CFB', 'OFB', 'CTR'],
+                                                key_sizes=[256])
+                des_results = run_des_benchmark(data, modes=['ECB', 'CBC'])
+
+                self.root.after(0, lambda: self._update_perf_chart(aes_results, des_results, data))
+
+                # 生成报告
+                report = generate_performance_report(data)
+                self.root.after(0, lambda: self._show_perf_result(aes_results, des_results, report))
+            except Exception as e:
+                self.root.after(0, lambda: messagebox.showerror("测试失败", str(e)))
+
+        Thread(target=task, daemon=True).start()
+
+    def _update_perf_chart(self, aes_results, des_results, data):
+        """更新性能图表"""
+        if not hasattr(self, 'mpl_canvas') or self.mpl_canvas is None:
+            return
+
+        import numpy as np
+        from matplotlib.figure import Figure
+
+        # 准备数据
+        aes_modes_list = [r.mode for r in aes_results]
+        aes_enc_speeds = [r.encrypt_speed for r in aes_results]
+        aes_dec_speeds = [r.decrypt_speed for r in aes_results]
+        des_modes_list = [r.mode for r in des_results]
+        des_enc_speeds = [r.encrypt_speed for r in des_results]
+        des_dec_speeds = [r.decrypt_speed for r in des_results]
+
+        # 清空重绘
+        self.ax_enc.clear()
+        self.ax_dec.clear()
+
+        x = np.arange(len(aes_modes_list + des_modes_list))
+        labels = aes_modes_list + [f'DES-{m}' for m in des_modes_list]
+        speeds_enc = aes_enc_speeds + des_enc_speeds
+        speeds_dec = aes_dec_speeds + des_dec_speeds
+
+        colors = ['#3498db'] * len(aes_modes_list) + ['#e67e22'] * len(des_modes_list)
+
+        bars_enc = self.ax_enc.bar(x, speeds_enc, color=colors, width=0.6)
+        self.ax_enc.set_xticks(x)
+        self.ax_enc.set_xticklabels(labels, fontsize=8)
+        self.ax_enc.set_title(f'AES-256 vs DES 加密速度对比\n(数据大小: {format_file_size(len(data))})',
+                              fontsize=10, fontweight='bold')
+        self.ax_enc.set_ylabel('速度 (MB/s)', fontsize=9)
+
+        # 在柱上显示数值
+        for bar, v in zip(bars_enc, speeds_enc):
+            self.ax_enc.text(bar.get_x() + bar.get_width() / 2, bar.get_height() + 0.5,
+                             f'{v:.1f}', ha='center', va='bottom', fontsize=7)
+
+        bars_dec = self.ax_dec.bar(x, speeds_dec, color=colors, width=0.6)
+        self.ax_dec.set_xticks(x)
+        self.ax_dec.set_xticklabels(labels, fontsize=8)
+        self.ax_dec.set_title('解密速度对比', fontsize=10, fontweight='bold')
+        self.ax_dec.set_ylabel('速度 (MB/s)', fontsize=9)
+
+        for bar, v in zip(bars_dec, speeds_dec):
+            self.ax_dec.text(bar.get_x() + bar.get_width() / 2, bar.get_height() + 0.5,
+                             f'{v:.1f}', ha='center', va='bottom', fontsize=7)
+
+        # 图例
+        from matplotlib.patches import Patch
+        legend_elements = [
+            Patch(facecolor='#3498db', label='AES-256'),
+            Patch(facecolor='#e67e22', label='DES'),
+        ]
+        self.ax_enc.legend(handles=legend_elements, loc='upper right', fontsize=8)
+        self.ax_dec.legend(handles=legend_elements, loc='upper right', fontsize=8)
+
+        self.mpl_fig.tight_layout()
+        self.mpl_canvas.draw()
+
+    def _show_perf_result(self, aes_results, des_results, report):
+        """显示性能测试结果"""
+        self.perf_result_text.delete(1.0, tk.END)
+        self.perf_result_text.insert(tk.END, "=" * 50 + "\n")
+        self.perf_result_text.insert(tk.END, "  性能测试完成 ✓\n")
+        self.perf_result_text.insert(tk.END, "=" * 50 + "\n\n")
+
+        self.perf_result_text.insert(tk.END, "AES-256 各模式加密速度:\n")
+        for r in aes_results:
+            self.perf_result_text.insert(tk.END,
+                f"  {r.mode:4s}: 加密 {r.encrypt_speed:>8.2f} MB/s | "
+                f"解密 {r.decrypt_speed:>8.2f} MB/s\n")
+
+        self.perf_result_text.insert(tk.END, "\nDES 各模式加密速度:\n")
+        for r in des_results:
+            self.perf_result_text.insert(tk.END,
+                f"  {r.mode:4s}: 加密 {r.encrypt_speed:>8.2f} MB/s | "
+                f"解密 {r.decrypt_speed:>8.2f} MB/s\n")
+
+        self.perf_result_text.insert(tk.END, f"\n报告已保存: {report}\n")
+
+    # ═══════════════════════════════════════
+    #  选项卡5：完整性校验
+    # ═══════════════════════════════════════
+
+    def _create_integrity_tab(self):
+        """创建完整性校验选项卡"""
+        tab = ttk.Frame(self.notebook)
+        self.notebook.add(tab, text=" 完整性校验 ")
+
+        left = ttk.LabelFrame(tab, text="文件选择", padding=10)
+        left.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=5, pady=5)
+        right = ttk.LabelFrame(tab, text="校验结果", padding=10)
+        right.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True, padx=5, pady=5)
+
+        # ── 左侧 ──
+        row = 0
+        ttk.Label(left, text="原始文件:").grid(row=row, column=0, sticky=tk.W, pady=4)
+        self.int_orig_var = tk.StringVar()
+        ttk.Entry(left, textvariable=self.int_orig_var, width=30).grid(row=row, column=1, padx=5)
+        ttk.Button(left, text="浏览", command=lambda: self._browse_int('orig')).grid(row=row, column=2)
+        row += 1
+
+        ttk.Label(left, text="解密文件:").grid(row=row, column=0, sticky=tk.W, pady=4)
+        self.int_dec_var = tk.StringVar()
+        ttk.Entry(left, textvariable=self.int_dec_var, width=30).grid(row=row, column=1, padx=5)
+        ttk.Button(left, text="浏览", command=lambda: self._browse_int('dec')).grid(row=row, column=2)
+        row += 1
+
+        ttk.Separator(left, orient=tk.HORIZONTAL).grid(row=row, column=0, columnspan=3,
+                                                        sticky=tk.EW, pady=10)
+        row += 1
+
+        ttk.Button(left, text="计算单个文件哈希", command=self._calc_single_hash,
+                   style='Accent.TButton').grid(row=row, column=0, columnspan=3, pady=5)
+        row += 1
+        ttk.Button(left, text="对比两个文件哈希", command=self._compare_hash,
+                   style='Accent.TButton').grid(row=row, column=0, columnspan=3, pady=5)
+        row += 1
+        ttk.Button(left, text="生成完整性校验报告", command=self._gen_int_report).grid(
+            row=row, column=0, columnspan=3, pady=5)
+
+        # 右侧结果
+        self.int_result_text = scrolledtext.ScrolledText(right, width=45, height=24,
+                                                         font=('Consolas', 9))
+        self.int_result_text.pack(fill=tk.BOTH, expand=True)
+
+    def _browse_int(self, target):
+        path = filedialog.askopenfilename()
+        if path:
+            if target == 'orig':
+                self.int_orig_var.set(path)
+            else:
+                self.int_dec_var.set(path)
+
+    def _calc_single_hash(self):
+        filepath = self.int_orig_var.get()
+        if not filepath or not os.path.exists(filepath):
+            messagebox.showerror("错误", "请选择文件")
+            return
+        hashes = compute_file_hashes(filepath)
+        if hashes:
+            self.int_result_text.delete(1.0, tk.END)
+            self.int_result_text.insert(tk.END, f"文件: {hashes['file_name']}\n")
+            self.int_result_text.insert(tk.END, f"大小: {hashes['file_size_fmt']}\n\n")
+            self.int_result_text.insert(tk.END, f"MD5:   {hashes['md5']}\n")
+            self.int_result_text.insert(tk.END, f"SHA1:  {hashes['sha1']}\n")
+            self.int_result_text.insert(tk.END, f"SHA256:{hashes['sha256']}\n")
+
+    def _compare_hash(self):
+        orig = self.int_orig_var.get()
+        dec = self.int_dec_var.get()
+        if not orig or not dec:
+            messagebox.showerror("错误", "请选择原始文件和解密文件")
+            return
+        if not os.path.exists(orig) or not os.path.exists(dec):
+            messagebox.showerror("错误", "文件不存在")
+            return
+
+        result = compare_files(orig, dec)
+        self.int_result_text.delete(1.0, tk.END)
+        self.int_result_text.insert(tk.END, "哈希对比结果:\n\n")
+        for algo, data in result['algorithms'].items():
+            status = "✓ 一致" if data['match'] else "✗ 不一致"
+            self.int_result_text.insert(tk.END, f"{algo}: {status}\n")
+            self.int_result_text.insert(tk.END, f"  原文件: {data['original_hash'][:20]}...\n")
+            self.int_result_text.insert(tk.END, f"  解密后: {data['decrypted_hash'][:20]}...\n\n")
+
+        if result['match']:
+            self.int_result_text.insert(tk.END, "结论: ✓ 文件完整性校验通过\n")
+        else:
+            self.int_result_text.insert(tk.END, "结论: ✗ 文件完整性校验失败\n")
+
+    def _gen_int_report(self):
+        orig = self.int_orig_var.get()
+        dec = self.int_dec_var.get()
+        if not orig or not dec:
+            messagebox.showerror("错误", "请选择原始文件和解密文件")
+            return
+        try:
+            report = generate_integrity_report(orig, dec)
+            messagebox.showinfo("成功", f"完整性校验报告已生成:\n{report}")
+            with open(report, 'r', encoding='utf-8') as f:
+                content = f.read()
+            self.int_result_text.delete(1.0, tk.END)
+            self.int_result_text.insert(tk.END, content[:2000])
+        except Exception as e:
+            messagebox.showerror("错误", str(e))
+
+    # ─── 状态栏 ───
+
+    def _build_status_bar(self):
+        """构建底部状态栏"""
+        status = tk.Frame(self.root, bg='#ecf0f1', height=28)
+        status.pack(fill=tk.X, side=tk.BOTTOM)
+        status.pack_propagate(False)
+
+        self.status_var = tk.StringVar(value="就绪 | 2023337621104 金科丞")
+        tk.Label(status, textvariable=self.status_var,
+                 bg='#ecf0f1', fg='#555', font=('Microsoft YaHei', 9)).pack(side=tk.LEFT, padx=12)
+
+    # ─── 窗口关闭 ───
+
+    def _on_close(self):
+        """关闭窗口确认"""
+        if messagebox.askokcancel("退出", "确定要退出 Secure AES 加密系统吗？"):
+            self.root.destroy()
+
+    # ─── 启动 ───
+
+    def run(self):
+        """启动GUI主循环"""
+        self.root.mainloop()
+
+
+def launch_gui():
+    """启动图形界面（供main.py调用）"""
+    app = SecureAESGUI()
+    app.run()

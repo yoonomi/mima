@@ -32,6 +32,7 @@ from integrity.file_hash import compute_file_hashes, get_hash_records
 from integrity.hash_compare import compare_files
 from integrity.integrity_report import generate_integrity_report
 from performance.performance_report import generate_performance_report
+from gui.app import launch_gui
 
 
 def clear_screen():
@@ -229,6 +230,7 @@ def main_menu(login: Login):
             ('6', '文件完整性校验'),
             ('7', '加密性能测试'),
             ('8', '查看日志'),
+            ('9', '打开图形界面 (GUI)'),
             ('0', '退出登录'),
         ], "主菜单")
 
@@ -250,6 +252,8 @@ def main_menu(login: Login):
             performance_menu()
         elif choice == '8':
             view_logs_menu()
+        elif choice == '9':
+            launch_gui()
         elif choice == '0':
             login.logout()
             break
