@@ -1,0 +1,23 @@
+{
+  "system": {
+    "name": "Secure_AES_System",
+    "version": "1.0.0",
+    "author": "金科丞",
+    "date": "2026-06-30"
+  },
+  "encryption": {
+    "default_algorithm": "AES",
+    "default_mode": "CBC",
+    "key_sizes": [128, 192, 256],
+    "supported_algorithms": ["AES", "DES"]
+  },
+  "performance": {
+    "test_iterations": 10,
+    "benchmark_data_sizes": ["small", "medium", "large"]
+  },
+  "security": {
+    "min_password_score": 50,
+    "max_file_size_mb": 500,
+    "hash_algorithms": ["MD5", "SHA1", "SHA256"]
+  }
+}

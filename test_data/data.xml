@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testdata>
+  <description>Secure AES System XML Test File</description>
+  <records>
+    <record id="1">
+      <name>加密测试1</name>
+      <algorithm>AES-256</algorithm>
+      <mode>CBC</mode>
+      <status>success</status>
+    </record>
+    <record id="2">
+      <name>加密测试2</name>
+      <algorithm>AES-128</algorithm>
+      <mode>ECB</mode>
+      <status>success</status>
+    </record>
+    <record id="3">
+      <name>加密测试3</name>
+      <algorithm>DES</algorithm>
+      <mode>CBC</mode>
+      <status>success</status>
+    </record>
+    <record id="4">
+      <name>解密测试1</name>
+      <algorithm>AES-256</algorithm>
+      <mode>CFB</mode>
+      <status>success</status>
+    </record>
+    <record id="5">
+      <name>完整性校验</name>
+      <algorithm>SHA256</algorithm>
+      <status>verified</status>
+    </record>
+  </records>
+</testdata>

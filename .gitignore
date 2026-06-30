@@ -19,6 +19,12 @@ Thumbs.db
 # 数据库文件（可根据需要决定是否排除）
 # database/*.json
 
+# PyInstaller 构建产物
+build/
+dist/
+*.spec
+
+
 # 输出文件（保留目录结构）
 encrypted/*
 !encrypted/.gitkeep
