@@ -922,10 +922,126 @@ class SecureAESGUI:
         self.root.mainloop()
 
 
+def show_login_dialog() -> bool:
+    """显示登录对话框，成功返回 True"""
+    import hashlib
+    from auth.user_manager import UserManager
+    from auth.register import Register
+    from auth.login import Login
+    from core.password_checker import check_password_strength, generate_strong_password
+
+    login_win = tk.Tk()
+    login_win.title("Secure AES 加密系统 - 登录")
+    login_win.geometry("420x300")
+    login_win.resizable(False, False)
+    login_win.configure(bg='#f0f0f0')
+
+    result = {'success': False}
+
+    def do_login():
+        username = entry_user.get().strip()
+        password = entry_pwd.get()
+        if not username or not password:
+            msg_var.set("请输入用户名和密码")
+            return
+        l = Login()
+        r = l.login(username, password)
+        if r['success']:
+            result['success'] = True
+            login_win.destroy()
+        else:
+            msg_var.set("用户名或密码错误")
+
+    def do_register():
+        username = entry_user.get().strip()
+        password = entry_pwd.get()
+        confirm = entry_cfm.get()
+        if not username or len(username) < 3:
+            msg_var.set("用户名至少3个字符")
+            return
+        if not password:
+            msg_var.set("密码不能为空")
+            return
+        if password != confirm:
+            msg_var.set("两次密码不一致")
+            return
+        strength = check_password_strength(password)
+        if strength['score'] < 50:
+            msg_var.set(f"密码强度不足({strength['score']}分)，请使用更强的密码")
+            return
+        reg = Register()
+        r = reg.register(username, password)
+        if r['success']:
+            msg_var.set("注册成功，请登录")
+            entry_cfm.delete(0, tk.END)
+            # 自动填入密码
+            entry_pwd.delete(0, tk.END)
+            entry_pwd.insert(0, password)
+        else:
+            msg_var.set(r['message'])
+
+    def show_pwd_strength(*args):
+        pwd = entry_pwd.get()
+        if pwd:
+            s = check_password_strength(pwd)
+            strength_label.config(text=f"强度: {s['level']} ({s['score']}分)")
+        else:
+            strength_label.config(text="")
+
+    # 标题
+    title_font = Font(family="Microsoft YaHei", size=14, weight="bold")
+    tk.Label(login_win, text="Secure AES 加密系统", font=title_font,
+             bg='#2c3e50', fg='white').pack(fill=tk.X, pady=(0, 10), ipady=10)
+
+    frame = ttk.Frame(login_win, padding=20)
+    frame.pack(fill=tk.BOTH, expand=True)
+
+    ttk.Label(frame, text="用户名:").grid(row=0, column=0, sticky=tk.W, pady=4)
+    entry_user = ttk.Entry(frame, width=30)
+    entry_user.grid(row=0, column=1, columnspan=2, padx=5)
+
+    ttk.Label(frame, text="密  码:").grid(row=1, column=0, sticky=tk.W, pady=4)
+    entry_pwd = ttk.Entry(frame, width=30, show='*')
+    entry_pwd.grid(row=1, column=1, columnspan=2, padx=5)
+    entry_pwd.bind('<KeyRelease>', show_pwd_strength)
+
+    ttk.Label(frame, text="确认密码:").grid(row=2, column=0, sticky=tk.W, pady=4)
+    entry_cfm = ttk.Entry(frame, width=30, show='*')
+    entry_cfm.grid(row=2, column=1, columnspan=2, padx=5)
+
+    strength_label = ttk.Label(frame, text="", foreground='#555')
+    strength_label.grid(row=3, column=1, columnspan=2, sticky=tk.W, pady=2)
+
+    msg_var = tk.StringVar()
+    msg_label = tk.Label(frame, textvariable=msg_var, fg='#e74c3c', bg='#f0f0f0')
+    msg_label.grid(row=4, column=0, columnspan=3, pady=5)
+
+    btn_frame = ttk.Frame(frame)
+    btn_frame.grid(row=5, column=0, columnspan=3, pady=10)
+
+    login_btn = tk.Button(btn_frame, text="登录", command=do_login,
+                          bg='#3498db', fg='white', width=10,
+                          font=('Microsoft YaHei', 10))
+    login_btn.pack(side=tk.LEFT, padx=5)
+
+    reg_btn = tk.Button(btn_frame, text="注册", command=do_register,
+                        bg='#27ae60', fg='white', width=10,
+                        font=('Microsoft YaHei', 10))
+    reg_btn.pack(side=tk.LEFT, padx=5)
+
+    # 回车键触发登录
+    login_win.bind('<Return>', lambda e: do_login())
+
+    entry_user.focus()
+    login_win.mainloop()
+    return result['success']
+
+
 def launch_gui():
-    """启动图形界面（供main.py调用）"""
-    app = SecureAESGUI()
-    app.run()
+    """启动图形界面（先登录，后进入主界面）"""
+    if show_login_dialog():
+        app = SecureAESGUI()
+        app.run()
 
 
 if __name__ == '__main__':
