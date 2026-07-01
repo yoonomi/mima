@@ -242,8 +242,9 @@ class SecureAESGUI:
                 result = encrypt_single_file(filepath, algo, mode, key, key_size=key_size)
                 self.root.after(0, lambda: self._show_encrypt_result(result))
             except Exception as e:
-                self.root.after(0, lambda: messagebox.showerror("加密失败", str(e)))
-                self.root.after(0, lambda: self.enc_result_text.insert(
+                err_msg = str(e)
+                self.root.after(0, lambda e=err_msg: messagebox.showerror("加密失败", e))
+                self.root.after(0, lambda e=err_msg: self.enc_result_text.insert(
                     tk.END, f"\n[✗] 加密失败: {e}\n"))
             finally:
                 self.root.after(0, lambda: self._reset_encrypt_state())
@@ -374,22 +375,23 @@ class SecureAESGUI:
                 result = decrypt_single_file(filepath, key, algo, mode)
                 self.root.after(0, lambda: self._show_decrypt_result(result))
             except ValueError as e:
-                # 密钥错误或数据损坏
-                self.root.after(0, lambda: messagebox.showerror(
+                err_msg = str(e)
+                self.root.after(0, lambda e=err_msg, a=algo, m=mode: messagebox.showerror(
                     "解密失败",
                     f"密钥不正确或数据已损坏！\n\n"
                     f"可能原因：\n"
                     f"1. 选择的密钥与加密时使用的密钥不一致\n"
-                    f"2. 加密模式不匹配（当前: {algo}-{mode}）\n"
+                    f"2. 加密模式不匹配（当前: {a}-{m}）\n"
                     f"3. 文件已被篡改\n\n"
                     f"详细错误: {e}"
                 ))
                 self.root.after(0, lambda: self.dec_result_text.insert(
-                    tk.END, f"\n[✗] 解密失败：密钥或模式不正确\n"))
+                    tk.END, "\n[✗] 解密失败：密钥或模式不正确\n"))
             except Exception as e:
-                self.root.after(0, lambda: messagebox.showerror(
+                err_msg = str(e)
+                self.root.after(0, lambda e=err_msg: messagebox.showerror(
                     "解密异常", f"解密过程发生异常:\n{e}"))
-                self.root.after(0, lambda: self.dec_result_text.insert(
+                self.root.after(0, lambda e=err_msg: self.dec_result_text.insert(
                     tk.END, f"\n[✗] 解密异常: {e}\n"))
             finally:
                 self.root.after(0, lambda: self._reset_decrypt_state())
