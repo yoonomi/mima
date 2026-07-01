@@ -203,9 +203,14 @@ class SecureAESGUI:
             row=row+2, column=2, padx=2)
         self.enc_batch_label = ttk.Label(left, text="", foreground='#555')
         self.enc_batch_label.grid(row=row+3, column=0, columnspan=3, sticky=tk.W, pady=2)
-        self.enc_batch_btn = ttk.Button(left, text="批量加密所有文件",
+        btn_row = ttk.Frame(left)
+        btn_row.grid(row=row+4, column=0, columnspan=3, pady=5)
+        self.enc_batch_btn = ttk.Button(btn_row, text="批量加密",
                                         command=self._do_encrypt_batch)
-        self.enc_batch_btn.grid(row=row+4, column=0, columnspan=3, pady=5)
+        self.enc_batch_btn.pack(side=tk.LEFT, padx=3)
+        ttk.Button(btn_row, text="清除选择",
+                   command=lambda: (setattr(self, 'enc_batch_files', []),
+                                   self.enc_batch_label.config(text=""))).pack(side=tk.LEFT, padx=3)
 
         # ── 右侧：结果 ──
         self.enc_result_text = scrolledtext.ScrolledText(right, width=45, height=22,
@@ -219,19 +224,30 @@ class SecureAESGUI:
             self.enc_file_var.set(path)
 
     def _browse_encrypt_batch(self):
-        """选择多个文件批量加密"""
+        """选择多个文件批量加密（累计添加）"""
         paths = filedialog.askopenfilenames(title="选择要批量加密的文件")
         if paths:
-            self.enc_batch_files = list(paths)
-            self.enc_batch_label.config(text=f"已选 {len(paths)} 个文件")
+            old_count = len(self.enc_batch_files)
+            for p in paths:
+                if p not in self.enc_batch_files:
+                    self.enc_batch_files.append(p)
+            added = len(self.enc_batch_files) - old_count
+            self.enc_batch_label.config(
+                text=f"已选 {len(self.enc_batch_files)} 个文件 (+新增{added}个)")
 
     def _browse_encrypt_dir(self):
-        """选择目录批量加密"""
+        """选择目录批量加密（追加到列表）"""
         path = filedialog.askdirectory(title="选择包含要加密文件的目录")
         if path:
             from file_system.file_utils import list_files as _list_files
-            self.enc_batch_files = _list_files(path)
-            self.enc_batch_label.config(text=f"已选目录: {len(self.enc_batch_files)} 个文件")
+            new_files = _list_files(path)
+            old_count = len(self.enc_batch_files)
+            for f in new_files:
+                if f not in self.enc_batch_files:
+                    self.enc_batch_files.append(f)
+            added = len(self.enc_batch_files) - old_count
+            self.enc_batch_label.config(
+                text=f"已选 {len(self.enc_batch_files)} 个文件 (目录新增{added}个)")
 
     def _do_encrypt_batch(self):
         """批量加密"""
@@ -439,9 +455,14 @@ class SecureAESGUI:
             row=row+2, column=2, padx=2)
         self.dec_batch_label = ttk.Label(left, text="", foreground='#555')
         self.dec_batch_label.grid(row=row+3, column=0, columnspan=3, sticky=tk.W, pady=2)
-        self.dec_batch_btn = ttk.Button(left, text="批量解密所有文件",
+        dec_btn_row = ttk.Frame(left)
+        dec_btn_row.grid(row=row+4, column=0, columnspan=3, pady=5)
+        self.dec_batch_btn = ttk.Button(dec_btn_row, text="批量解密",
                                          command=self._do_decrypt_batch)
-        self.dec_batch_btn.grid(row=row+4, column=0, columnspan=3, pady=5)
+        self.dec_batch_btn.pack(side=tk.LEFT, padx=3)
+        ttk.Button(dec_btn_row, text="清除选择",
+                   command=lambda: (setattr(self, 'dec_batch_files', []),
+                                   self.dec_batch_label.config(text=""))).pack(side=tk.LEFT, padx=3)
 
         # 右侧
         self.dec_result_text = scrolledtext.ScrolledText(right, width=45, height=22,
@@ -454,19 +475,30 @@ class SecureAESGUI:
             self.dec_file_var.set(path)
 
     def _browse_decrypt_batch(self):
-        """选择多个文件批量解密"""
+        """选择多个文件批量解密（累计添加）"""
         paths = filedialog.askopenfilenames(title="选择要批量解密的文件")
         if paths:
-            self.dec_batch_files = list(paths)
-            self.dec_batch_label.config(text=f"已选 {len(paths)} 个文件")
+            old_count = len(self.dec_batch_files)
+            for p in paths:
+                if p not in self.dec_batch_files:
+                    self.dec_batch_files.append(p)
+            added = len(self.dec_batch_files) - old_count
+            self.dec_batch_label.config(
+                text=f"已选 {len(self.dec_batch_files)} 个文件 (+新增{added}个)")
 
     def _browse_decrypt_dir(self):
-        """选择目录批量解密"""
+        """选择目录批量解密（追加到列表）"""
         path = filedialog.askdirectory(title="选择包含要解密文件的目录")
         if path:
             from file_system.file_utils import list_files as _list_files
-            self.dec_batch_files = _list_files(path)
-            self.dec_batch_label.config(text=f"已选目录: {len(self.dec_batch_files)} 个文件")
+            new_files = _list_files(path)
+            old_count = len(self.dec_batch_files)
+            for f in new_files:
+                if f not in self.dec_batch_files:
+                    self.dec_batch_files.append(f)
+            added = len(self.dec_batch_files) - old_count
+            self.dec_batch_label.config(
+                text=f"已选 {len(self.dec_batch_files)} 个文件 (目录新增{added}个)")
 
     def _do_decrypt_batch(self):
         """批量解密"""
