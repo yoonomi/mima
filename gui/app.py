@@ -38,6 +38,7 @@ from integrity.integrity_report import generate_integrity_report
 from performance.aes_benchmark import run_aes_benchmark
 from performance.des_benchmark import run_des_benchmark
 from performance.performance_report import generate_performance_report
+from logs.logger import get_recent_logs
 
 
 class SecureAESGUI:
@@ -100,6 +101,14 @@ class SecureAESGUI:
         tk.Label(header, text="2023337621104 金科丞 | 基于对称密码体系的数据加密解密",
                  fg='#bdc3c7', bg=self.colors['header'],
                  font=sub_font).pack(side=tk.RIGHT, padx=20, pady=15)
+
+        # 查看日志按钮
+        log_btn = tk.Button(header, text="📋 日志", font=('Microsoft YaHei', 9),
+                            bg=self.colors['header'], fg='#bdc3c7',
+                            activebackground='#34495e', activeforeground='white',
+                            bd=0, cursor='hand2',
+                            command=self._show_logs)
+        log_btn.pack(side=tk.RIGHT, padx=(0, 10), pady=12)
 
     # ─── 选项卡 ───
 
@@ -752,6 +761,50 @@ class SecureAESGUI:
                  bg='#ecf0f1', fg='#555', font=('Microsoft YaHei', 9)).pack(side=tk.LEFT, padx=12)
 
     # ─── 窗口关闭 ───
+
+    # ─── 日志查看 ───
+
+    def _show_logs(self):
+        """弹出日志查看窗口"""
+        log_win = tk.Toplevel(self.root)
+        log_win.title("系统操作日志")
+        log_win.geometry("700x450")
+        log_win.minsize(500, 300)
+        log_win.transient(self.root)
+
+        header = tk.Frame(log_win, bg=self.colors['header'], height=40)
+        header.pack(fill=tk.X, side=tk.TOP)
+        header.pack_propagate(False)
+        tk.Label(header, text="系统操作日志", fg='white',
+                 bg=self.colors['header'],
+                 font=('Microsoft YaHei', 12, 'bold')).pack(side=tk.LEFT, padx=15, pady=8)
+
+        text_area = scrolledtext.ScrolledText(log_win, font=('Consolas', 10),
+                                              wrap=tk.WORD, bg='#1e1e1e', fg='#d4d4d4')
+        text_area.pack(fill=tk.BOTH, expand=True, padx=8, pady=8)
+
+        btn_frame = tk.Frame(log_win)
+        btn_frame.pack(fill=tk.X, padx=8, pady=(0, 8))
+
+        def refresh():
+            text_area.delete(1.0, tk.END)
+            logs = get_recent_logs(100)
+            if logs:
+                for line in logs:
+                    text_area.insert(tk.END, line + '\n')
+            else:
+                text_area.insert(tk.END, "暂无日志记录。\n")
+            text_area.see(tk.END)
+
+        tk.Button(btn_frame, text="🔄 刷新", command=refresh,
+                  bg=self.colors['accent'], fg='white',
+                  font=('Microsoft YaHei', 9)).pack(side=tk.LEFT, padx=5)
+        tk.Button(btn_frame, text="关闭", command=log_win.destroy,
+                  font=('Microsoft YaHei', 9)).pack(side=tk.RIGHT, padx=5)
+
+        refresh()
+
+    # ─── 关闭窗口 ───
 
     def _on_close(self):
         """关闭窗口确认"""
