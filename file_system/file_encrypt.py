@@ -41,7 +41,8 @@ def encrypt_single_file(input_file: str, algorithm: str = 'AES',
     original_size = get_file_size(input_file) or 0
     basename = os.path.basename(input_file)
     name_no_ext, ext = os.path.splitext(basename)
-    output_file = os.path.join(output_dir, f"{name_no_ext}_encrypted{ext}")
+    # 文件名包含算法和模式，避免不同加密方式覆盖
+    output_file = os.path.join(output_dir, f"{name_no_ext}_{algorithm}_{mode}_encrypted{ext}")
 
     try:
         if algorithm.upper() == 'AES':

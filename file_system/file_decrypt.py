@@ -39,9 +39,11 @@ def decrypt_single_file(input_file: str, key: bytes, algorithm: str = 'AES',
     encrypted_size = get_file_size(input_file) or 0
     basename = os.path.basename(input_file)
     name_no_ext, ext = os.path.splitext(basename)
-    # 移除可能有的 _encrypted 后缀
-    name_no_ext = name_no_ext.replace('_encrypted', '').replace('_decrypted', '')
-    output_file = os.path.join(output_dir, f"{name_no_ext}_decrypted{ext}")
+    # 从加密文件名中提取原始文件名部分（移除 _AES_CBC_encrypted 等后缀）
+    import re as _re
+    orig_name = _re.sub(r'_(AES|DES)_(ECB|CBC|CFB|OFB|CTR)_encrypted$', '', name_no_ext)
+    orig_name = orig_name.replace('_encrypted', '').replace('_decrypted', '')
+    output_file = os.path.join(output_dir, f"{orig_name}_{algorithm}_{mode}_decrypted{ext}")
 
     try:
         if algorithm.upper() == 'AES':

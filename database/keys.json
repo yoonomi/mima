@@ -41,5 +41,19 @@
         "key_size": 256,
         "key_b64": "Mr9dOe0kr32ZDGz+P89yXv+DejYo9pO+DJv1YSA48OY=",
         "created": "2026-07-01 15:33:48"
+    },
+    "AES_KEY_128_7": {
+        "name": "AES_KEY_128_7",
+        "algorithm": "AES",
+        "key_size": 128,
+        "key_b64": "Hyxvk3Xq1vV0Qs7cS7Pisg==",
+        "created": "2026-07-01 15:48:40"
+    },
+    "AES_KEY_128_8": {
+        "name": "AES_KEY_128_8",
+        "algorithm": "AES",
+        "key_size": 128,
+        "key_b64": "8IQ/PSjDXogxX6Wl1jMIfw==",
+        "created": "2026-07-01 15:48:53"
     }
 }
