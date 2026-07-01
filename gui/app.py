@@ -171,21 +171,45 @@ class SecureAESGUI:
         self.enc_mode_combo.grid(row=row, column=1, sticky=tk.W, padx=5)
         row += 1
 
-        ttk.Label(left, text="生成的密钥:").grid(row=row, column=0, sticky=tk.W, pady=4)
-        self.enc_key_var = tk.StringVar(value='(每次加密自动生成新密钥)')
-        ttk.Label(left, textvariable=self.enc_key_var, foreground='#555').grid(
-            row=row, column=1, columnspan=2, sticky=tk.W, padx=5)
+        # ── 密钥来源选择 ──
+        ttk.Label(left, text="密钥来源:").grid(row=row, column=0, sticky=tk.W, pady=4)
+        self.enc_key_source = tk.StringVar(value='auto')
+        src_frame = ttk.Frame(left)
+        src_frame.grid(row=row, column=1, columnspan=2, sticky=tk.W)
+        ttk.Radiobutton(src_frame, text="自动生成", variable=self.enc_key_source,
+                        value='auto', command=self._toggle_key_source).pack(side=tk.LEFT)
+        ttk.Radiobutton(src_frame, text="使用已有", variable=self.enc_key_source,
+                        value='exist', command=self._toggle_key_source).pack(side=tk.LEFT, padx=10)
         row += 1
 
+        # 自动生成时的密钥名称显示
+        self.enc_key_var = tk.StringVar(value='(将自动生成新密钥)')
+        self.enc_key_label = ttk.Label(left, textvariable=self.enc_key_var, foreground='#555')
+        self.enc_key_label.grid(row=row, column=1, columnspan=2, sticky=tk.W, padx=5)
+        row += 1
+
+        # 选择已有密钥的下拉框（默认隐藏）
+        self.enc_exist_key_var = tk.StringVar()
+        self.enc_exist_key_combo = ttk.Combobox(left, textvariable=self.enc_exist_key_var,
+                                                 values=self._get_key_names(),
+                                                 state='readonly', width=27)
+        row += 1
+
+        # 密钥长度选项（AES 自动生成时显示）
         self.enc_keysize_label = ttk.Label(left, text="密钥长度:")
-        self.enc_keysize_label.grid(row=row, column=0, sticky=tk.W, pady=4)
         self.enc_keysize_var = tk.StringVar(value='256')
         self.enc_ks_frame = ttk.Frame(left)
-        self.enc_ks_frame.grid(row=row, column=1, columnspan=2, sticky=tk.W)
         for ks in ['128', '192', '256']:
             ttk.Radiobutton(self.enc_ks_frame, text=ks+'位', variable=self.enc_keysize_var,
                             value=ks).pack(side=tk.LEFT)
         row += 1
+
+        # 设置初始显示状态
+        self.enc_keysize_label.grid(row=row-1, column=0, sticky=tk.W, pady=4)
+        self.enc_ks_frame.grid(row=row-1, column=1, columnspan=2, sticky=tk.W)
+        self.enc_key_label.grid(row=row-2, column=1, columnspan=2, sticky=tk.W, padx=5)
+        # 默认隐藏已有密钥下拉框
+        self.enc_exist_key_combo.grid_remove()
 
         self.encrypt_btn = ttk.Button(left, text="开始加密", command=self._do_encrypt,
                                        style='Accent.TButton')
@@ -295,6 +319,35 @@ class SecureAESGUI:
                     f"  ✗ {os.path.basename(r.get('input_file',''))}: {r.get('error','')}\n")
         self._refresh_dec_keys()
 
+    def _toggle_key_source(self):
+        """切换密钥来源时显示/隐藏对应控件"""
+        is_auto = self.enc_key_source.get() == 'auto'
+        algo = self.enc_algo_var.get()
+        # 密钥名称标签
+        if is_auto:
+            self.enc_key_label.grid()
+            self.enc_exist_key_combo.grid_remove()
+            # AES 显示密钥长度选项
+            if algo == 'AES':
+                self.enc_keysize_label.grid()
+                self.enc_ks_frame.grid()
+            else:
+                self.enc_keysize_label.grid_remove()
+                self.enc_ks_frame.grid_remove()
+        else:
+            self.enc_key_label.grid_remove()
+            self.enc_keysize_label.grid_remove()
+            self.enc_ks_frame.grid_remove()
+            self.enc_exist_key_combo.grid(row=8, column=1, columnspan=2, sticky=tk.W, padx=5)
+            self._refresh_enc_exist_keys()
+
+    def _refresh_enc_exist_keys(self):
+        """刷新加密界面的已有密钥列表"""
+        keys = self._get_key_names()
+        self.enc_exist_key_combo['values'] = keys
+        if keys and keys[0] != '(无可用密钥)':
+            self.enc_exist_key_var.set(keys[-1])
+
     def _on_algo_change(self):
         """算法切换时更新模式选项和密钥长度"""
         algo = self.enc_algo_var.get()
@@ -302,13 +355,8 @@ class SecureAESGUI:
         self.enc_mode_combo['values'] = modes
         self.enc_mode_var.set('CBC' if 'CBC' in modes else modes[0])
 
-        # 选择 DES 时隐藏密钥长度选项（DES 固定 56 位）
-        if algo == 'DES':
-            self.enc_keysize_label.grid_remove()
-            self.enc_ks_frame.grid_remove()
-        else:
-            self.enc_keysize_label.grid()
-            self.enc_ks_frame.grid()
+        # 根据算法和密钥来源显示/隐藏密钥长度
+        self._toggle_key_source()
 
     def _do_encrypt(self):
         """执行加密操作"""
@@ -330,17 +378,30 @@ class SecureAESGUI:
         self.enc_result_text.delete(1.0, tk.END)
         self.enc_result_text.insert(tk.END, "加密中，请稍候...\n")
 
-        # 生成或使用已有密钥
-        if algo == 'AES':
-            key_info = self.km.generate_aes_key(key_size)
-            key = self.km.get_key(key_info['name'])
-            self.current_key_name = key_info['name']
+        # 根据密钥来源：自动生成 或 使用已有
+        if self.enc_key_source.get() == 'auto':
+            if algo == 'AES':
+                key_info = self.km.generate_aes_key(key_size)
+                key = self.km.get_key(key_info['name'])
+                self.current_key_name = key_info['name']
+            else:
+                key_info = self.km.generate_des_key()
+                key = self.km.get_key(key_info['name'])
+                self.current_key_name = key_info['name']
+            self.enc_key_var.set(f"已生成: {self.current_key_name}")
         else:
-            key_info = self.km.generate_des_key()
-            key = self.km.get_key(key_info['name'])
-            self.current_key_name = key_info['name']
-
-        self.enc_key_var.set(self.current_key_name)
+            key_name = self.enc_exist_key_var.get()
+            if not key_name or key_name == '(无可用密钥)':
+                messagebox.showerror("错误", "请选择有效的密钥")
+                self._reset_encrypt_state()
+                return
+            key = self.km.get_key(key_name)
+            if key is None:
+                messagebox.showerror("错误", "密钥无效")
+                self._reset_encrypt_state()
+                return
+            self.current_key_name = key_name
+            self.enc_key_var.set(f"使用密钥: {key_name}")
 
         def task():
             try:
