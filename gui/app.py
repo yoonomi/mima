@@ -177,12 +177,13 @@ class SecureAESGUI:
             row=row, column=1, columnspan=2, sticky=tk.W, padx=5)
         row += 1
 
-        ttk.Label(left, text="AES密钥长度:").grid(row=row, column=0, sticky=tk.W, pady=4)
+        self.enc_keysize_label = ttk.Label(left, text="密钥长度:")
+        self.enc_keysize_label.grid(row=row, column=0, sticky=tk.W, pady=4)
         self.enc_keysize_var = tk.StringVar(value='256')
-        ks_frame = ttk.Frame(left)
-        ks_frame.grid(row=row, column=1, columnspan=2, sticky=tk.W)
+        self.enc_ks_frame = ttk.Frame(left)
+        self.enc_ks_frame.grid(row=row, column=1, columnspan=2, sticky=tk.W)
         for ks in ['128', '192', '256']:
-            ttk.Radiobutton(ks_frame, text=ks+'位', variable=self.enc_keysize_var,
+            ttk.Radiobutton(self.enc_ks_frame, text=ks+'位', variable=self.enc_keysize_var,
                             value=ks).pack(side=tk.LEFT)
         row += 1
 
@@ -202,11 +203,19 @@ class SecureAESGUI:
             self.enc_file_var.set(path)
 
     def _on_algo_change(self):
-        """算法切换时更新模式选项"""
+        """算法切换时更新模式选项和密钥长度"""
         algo = self.enc_algo_var.get()
         modes = aes_modes() if algo == 'AES' else des_modes()
         self.enc_mode_combo['values'] = modes
         self.enc_mode_var.set('CBC' if 'CBC' in modes else modes[0])
+
+        # 选择 DES 时隐藏密钥长度选项（DES 固定 56 位）
+        if algo == 'DES':
+            self.enc_keysize_label.grid_remove()
+            self.enc_ks_frame.grid_remove()
+        else:
+            self.enc_keysize_label.grid()
+            self.enc_ks_frame.grid()
 
     def _do_encrypt(self):
         """执行加密操作"""
