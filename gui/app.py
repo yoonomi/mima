@@ -128,6 +128,9 @@ class SecureAESGUI:
         self._create_performance_tab()
         self._create_integrity_tab()
 
+        # 切换选项卡时自动刷新
+        self.notebook.bind('<<NotebookTabChanged>>', self._on_tab_change)
+
     # ═══════════════════════════════════════
     #  选项卡1：文件加密
     # ═══════════════════════════════════════
@@ -273,6 +276,9 @@ class SecureAESGUI:
         self.enc_result_text.insert(tk.END, f"模式:     {result['mode']}\n")
         self.enc_result_text.insert(tk.END, f"密钥:     {self.current_key_name}\n")
 
+        # 加密完成后自动刷新解密密钥列表
+        self._refresh_dec_keys()
+
     # ═══════════════════════════════════════
     #  选项卡2：文件解密
     # ═══════════════════════════════════════
@@ -318,9 +324,13 @@ class SecureAESGUI:
 
         ttk.Label(left, text="选择密钥:").grid(row=row, column=0, sticky=tk.W, pady=4)
         self.dec_key_var = tk.StringVar()
-        self.dec_key_combo = ttk.Combobox(left, textvariable=self.dec_key_var,
-                                          values=self._get_key_names(), state='readonly', width=30)
-        self.dec_key_combo.grid(row=row, column=1, columnspan=2, sticky=tk.W, padx=5)
+        key_frame = ttk.Frame(left)
+        key_frame.grid(row=row, column=1, columnspan=2, sticky=tk.W, padx=5)
+        self.dec_key_combo = ttk.Combobox(key_frame, textvariable=self.dec_key_var,
+                                          values=self._get_key_names(), state='readonly', width=27)
+        self.dec_key_combo.pack(side=tk.LEFT)
+        ttk.Button(key_frame, text="🔄", width=3,
+                   command=self._refresh_dec_keys).pack(side=tk.LEFT, padx=3)
         row += 1
 
         self.decrypt_btn = ttk.Button(left, text="开始解密", command=self._do_decrypt,
@@ -340,6 +350,25 @@ class SecureAESGUI:
     def _get_key_names(self):
         keys = self.km.list_keys()
         return list(keys.keys()) if keys else ['(无可用密钥)']
+
+    def _refresh_dec_keys(self):
+        """刷新解密界面的密钥下拉列表"""
+        keys = self._get_key_names()
+        self.dec_key_combo['values'] = keys
+        if keys and keys[0] != '(无可用密钥)':
+            self.dec_key_var.set(keys[-1])  # 默认选中最新密钥
+        else:
+            self.dec_key_var.set('')
+
+    def _on_tab_change(self, event=None):
+        """切换选项卡时自动刷新"""
+        try:
+            tab_id = self.notebook.select()
+            tab_text = self.notebook.tab(tab_id, 'text')
+            if '解密' in tab_text:
+                self._refresh_dec_keys()
+        except Exception:
+            pass
 
     def _do_decrypt(self):
         # 防止重复点击
@@ -473,6 +502,7 @@ class SecureAESGUI:
                 info = self.km.generate_des_key()
             messagebox.showinfo("成功", f"密钥已生成: {info['name']}")
             self._refresh_key_list()
+            self._refresh_dec_keys()
         except Exception as e:
             messagebox.showerror("错误", str(e))
 
