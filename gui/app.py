@@ -189,7 +189,23 @@ class SecureAESGUI:
 
         self.encrypt_btn = ttk.Button(left, text="开始加密", command=self._do_encrypt,
                                        style='Accent.TButton')
-        self.encrypt_btn.grid(row=row, column=0, columnspan=3, pady=15)
+        self.encrypt_btn.grid(row=row, column=0, columnspan=3, pady=5)
+
+        # ── 批量加密 ──
+        ttk.Separator(left, orient=tk.HORIZONTAL).grid(row=row+1, column=0, columnspan=3,
+                                                       sticky=tk.EW, pady=5)
+        ttk.Label(left, text="批量加密:", font=('Microsoft YaHei', 9, 'bold')).grid(
+            row=row+2, column=0, sticky=tk.W, pady=2)
+        self.enc_batch_files = []
+        ttk.Button(left, text="选择多个文件...", command=self._browse_encrypt_batch).grid(
+            row=row+2, column=1, padx=2)
+        ttk.Button(left, text="选择目录...", command=self._browse_encrypt_dir).grid(
+            row=row+2, column=2, padx=2)
+        self.enc_batch_label = ttk.Label(left, text="", foreground='#555')
+        self.enc_batch_label.grid(row=row+3, column=0, columnspan=3, sticky=tk.W, pady=2)
+        self.enc_batch_btn = ttk.Button(left, text="批量加密所有文件",
+                                        command=self._do_encrypt_batch)
+        self.enc_batch_btn.grid(row=row+4, column=0, columnspan=3, pady=5)
 
         # ── 右侧：结果 ──
         self.enc_result_text = scrolledtext.ScrolledText(right, width=45, height=22,
@@ -201,6 +217,67 @@ class SecureAESGUI:
         path = filedialog.askopenfilename(title="选择要加密的文件")
         if path:
             self.enc_file_var.set(path)
+
+    def _browse_encrypt_batch(self):
+        """选择多个文件批量加密"""
+        paths = filedialog.askopenfilenames(title="选择要批量加密的文件")
+        if paths:
+            self.enc_batch_files = list(paths)
+            self.enc_batch_label.config(text=f"已选 {len(paths)} 个文件")
+
+    def _browse_encrypt_dir(self):
+        """选择目录批量加密"""
+        path = filedialog.askdirectory(title="选择包含要加密文件的目录")
+        if path:
+            from file_system.file_utils import list_files as _list_files
+            self.enc_batch_files = _list_files(path)
+            self.enc_batch_label.config(text=f"已选目录: {len(self.enc_batch_files)} 个文件")
+
+    def _do_encrypt_batch(self):
+        """批量加密"""
+        if not self.enc_batch_files:
+            messagebox.showwarning("提示", "请先选择要加密的文件")
+            return
+        if getattr(self, '_encrypting', False):
+            messagebox.showwarning("提示", "正在加密中，请等待")
+            return
+        algo = self.enc_algo_var.get()
+        mode = self.enc_mode_var.get()
+        key_size = int(self.enc_keysize_var.get()) if algo == 'AES' else 56
+
+        self._encrypting = True
+        self.enc_batch_btn.configure(state='disabled')
+        self.enc_result_text.delete(1.0, tk.END)
+        self.enc_result_text.insert(tk.END, f"批量加密 {len(self.enc_batch_files)} 个文件...\n")
+
+        from file_system.batch_encrypt import batch_encrypt_files
+        def task():
+            try:
+                results = batch_encrypt_files(
+                    self.enc_batch_files, algo, mode, key_size=key_size)
+                self.root.after(0, lambda: self._show_batch_encrypt_result(results))
+            except Exception as e:
+                self.root.after(0, lambda: messagebox.showerror("批量加密失败", str(e)))
+            finally:
+                self.root.after(0, lambda: self._reset_encrypt_state())
+        Thread(target=task, daemon=True).start()
+
+    def _show_batch_encrypt_result(self, results):
+        """显示批量加密结果"""
+        self.enc_result_text.delete(1.0, tk.END)
+        ok = sum(1 for r in results if r['status'] == 'success')
+        fail = sum(1 for r in results if r['status'] == 'failed')
+        self.enc_result_text.insert(tk.END, "=" * 40 + "\n")
+        self.enc_result_text.insert(tk.END, f"  批量加密完成: 成功 {ok}, 失败 {fail}\n")
+        self.enc_result_text.insert(tk.END, "=" * 40 + "\n\n")
+        for r in results:
+            if r['status'] == 'success':
+                self.enc_result_text.insert(tk.END,
+                    f"  ✓ {os.path.basename(r['input_file'])} → {os.path.basename(r['output_file'])}\n")
+            else:
+                self.enc_result_text.insert(tk.END,
+                    f"  ✗ {os.path.basename(r.get('input_file',''))}: {r.get('error','')}\n")
+        self._refresh_dec_keys()
 
     def _on_algo_change(self):
         """算法切换时更新模式选项和密钥长度"""
@@ -268,6 +345,7 @@ class SecureAESGUI:
         self._encrypting = False
         try:
             self.encrypt_btn.configure(state='normal')
+            self.enc_batch_btn.configure(state='normal')
         except Exception:
             pass
 
@@ -347,7 +425,23 @@ class SecureAESGUI:
 
         self.decrypt_btn = ttk.Button(left, text="开始解密", command=self._do_decrypt,
                                        style='Accent.TButton')
-        self.decrypt_btn.grid(row=row, column=0, columnspan=3, pady=15)
+        self.decrypt_btn.grid(row=row, column=0, columnspan=3, pady=5)
+
+        # ── 批量解密 ──
+        ttk.Separator(left, orient=tk.HORIZONTAL).grid(row=row+1, column=0, columnspan=3,
+                                                       sticky=tk.EW, pady=5)
+        ttk.Label(left, text="批量解密:", font=('Microsoft YaHei', 9, 'bold')).grid(
+            row=row+2, column=0, sticky=tk.W, pady=2)
+        self.dec_batch_files = []
+        ttk.Button(left, text="选择多个文件...", command=self._browse_decrypt_batch).grid(
+            row=row+2, column=1, padx=2)
+        ttk.Button(left, text="选择目录...", command=self._browse_decrypt_dir).grid(
+            row=row+2, column=2, padx=2)
+        self.dec_batch_label = ttk.Label(left, text="", foreground='#555')
+        self.dec_batch_label.grid(row=row+3, column=0, columnspan=3, sticky=tk.W, pady=2)
+        self.dec_batch_btn = ttk.Button(left, text="批量解密所有文件",
+                                         command=self._do_decrypt_batch)
+        self.dec_batch_btn.grid(row=row+4, column=0, columnspan=3, pady=5)
 
         # 右侧
         self.dec_result_text = scrolledtext.ScrolledText(right, width=45, height=22,
@@ -358,6 +452,74 @@ class SecureAESGUI:
         path = filedialog.askopenfilename(title="选择要解密的文件")
         if path:
             self.dec_file_var.set(path)
+
+    def _browse_decrypt_batch(self):
+        """选择多个文件批量解密"""
+        paths = filedialog.askopenfilenames(title="选择要批量解密的文件")
+        if paths:
+            self.dec_batch_files = list(paths)
+            self.dec_batch_label.config(text=f"已选 {len(paths)} 个文件")
+
+    def _browse_decrypt_dir(self):
+        """选择目录批量解密"""
+        path = filedialog.askdirectory(title="选择包含要解密文件的目录")
+        if path:
+            from file_system.file_utils import list_files as _list_files
+            self.dec_batch_files = _list_files(path)
+            self.dec_batch_label.config(text=f"已选目录: {len(self.dec_batch_files)} 个文件")
+
+    def _do_decrypt_batch(self):
+        """批量解密"""
+        if not self.dec_batch_files:
+            messagebox.showwarning("提示", "请先选择要解密的文件")
+            return
+        if getattr(self, '_decrypting', False):
+            messagebox.showwarning("提示", "正在解密中，请等待")
+            return
+        algo = self.dec_algo_var.get()
+        mode = self.dec_mode_var.get()
+        key_name = self.dec_key_var.get()
+        if not key_name or key_name == '(无可用密钥)':
+            messagebox.showerror("错误", "请选择有效的密钥")
+            return
+        key = self.km.get_key(key_name)
+        if key is None:
+            messagebox.showerror("错误", "密钥无效")
+            return
+
+        self._decrypting = True
+        self.decrypt_btn.configure(state='disabled')
+        self.dec_batch_btn.configure(state='disabled')
+        self.dec_result_text.delete(1.0, tk.END)
+        self.dec_result_text.insert(tk.END, f"批量解密 {len(self.dec_batch_files)} 个文件...\n")
+
+        from file_system.batch_decrypt import batch_decrypt_files
+        def task():
+            try:
+                results = batch_decrypt_files(
+                    self.dec_batch_files, key, algo, mode)
+                self.root.after(0, lambda: self._show_batch_decrypt_result(results))
+            except Exception as e:
+                self.root.after(0, lambda: messagebox.showerror("批量解密失败", str(e)))
+            finally:
+                self.root.after(0, lambda: self._reset_decrypt_state())
+        Thread(target=task, daemon=True).start()
+
+    def _show_batch_decrypt_result(self, results):
+        """显示批量解密结果"""
+        self.dec_result_text.delete(1.0, tk.END)
+        ok = sum(1 for r in results if r['status'] == 'success')
+        fail = sum(1 for r in results if r['status'] == 'failed')
+        self.dec_result_text.insert(tk.END, "=" * 40 + "\n")
+        self.dec_result_text.insert(tk.END, f"  批量解密完成: 成功 {ok}, 失败 {fail}\n")
+        self.dec_result_text.insert(tk.END, "=" * 40 + "\n\n")
+        for r in results:
+            if r['status'] == 'success':
+                self.dec_result_text.insert(tk.END,
+                    f"  ✓ {os.path.basename(r['input_file'])} → {os.path.basename(r['output_file'])}\n")
+            else:
+                self.dec_result_text.insert(tk.END,
+                    f"  ✗ {os.path.basename(r.get('input_file',''))}: {r.get('error','')}\n")
 
     def _get_key_names(self):
         keys = self.km.list_keys()
@@ -444,6 +606,7 @@ class SecureAESGUI:
         self._decrypting = False
         try:
             self.decrypt_btn.configure(state='normal')
+            self.dec_batch_btn.configure(state='normal')
         except Exception:
             pass
 
