@@ -4,10 +4,15 @@
 """
 
 import os
+import sys
 
 
-# 项目根目录
-ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
+# 项目根目录（兼容 PyInstaller 打包环境）
+if getattr(sys, 'frozen', False):
+    # PyInstaller 打包后，数据文件在 sys._MEIPASS 目录下
+    ROOT_DIR = sys._MEIPASS
+else:
+    ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 # 各模块目录
 CORE_DIR = os.path.join(ROOT_DIR, 'core')

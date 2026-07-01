@@ -9,8 +9,12 @@ Secure_AES_System - 基于对称密码体系的数据加密解密系统
 import os
 import sys
 
-# 确保项目根目录在系统路径中
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+# 确保项目根目录在系统路径中（兼容 PyInstaller 打包环境）
+if getattr(sys, 'frozen', False):
+    BASE_DIR = os.path.dirname(sys.executable)
+else:
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, BASE_DIR)
 
 from config import (
     ROOT_DIR, TEST_DATA_DIR, ENCRYPTED_DIR, DECRYPTED_DIR,

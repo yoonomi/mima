@@ -11,8 +11,14 @@ from tkinter.font import Font
 from threading import Thread
 from datetime import datetime
 
-# 确保项目根目录在路径中
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+# 确保项目根目录在路径中（兼容 PyInstaller 打包环境）
+if getattr(sys, 'frozen', False):
+    # PyInstaller 打包后，模块在 _internal 目录下
+    BASE_DIR = os.path.dirname(sys.executable)
+else:
+    BASE_DIR = os.path.join(os.path.dirname(__file__), '..')
+if BASE_DIR not in sys.path:
+    sys.path.insert(0, BASE_DIR)
 
 from config import TEST_DATA_DIR, ENCRYPTED_DIR, DECRYPTED_DIR, REPORTS_DIR
 from core.aes_crypto import get_supported_modes as aes_modes, generate_key as aes_gen_key
@@ -758,3 +764,7 @@ def launch_gui():
     """启动图形界面（供main.py调用）"""
     app = SecureAESGUI()
     app.run()
+
+
+if __name__ == '__main__':
+    launch_gui()

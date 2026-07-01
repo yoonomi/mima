@@ -4,6 +4,7 @@
 """
 
 import os
+import sys
 import logging
 from datetime import datetime
 from typing import Optional
@@ -11,8 +12,12 @@ from typing import Optional
 from config import LOG_DIR
 
 
-# 日志文件路径
-LOG_FILE = os.path.join(LOG_DIR, 'operation.log')
+# 日志文件路径（PyInstaller 打包后使用可写路径）
+if getattr(sys, 'frozen', False):
+    # 在 EXE 所在目录创建 logs 文件夹
+    LOG_FILE = os.path.join(os.path.dirname(sys.executable), 'logs', 'operation.log')
+else:
+    LOG_FILE = os.path.join(LOG_DIR, 'operation.log')
 
 
 def setup_logger() -> logging.Logger:
