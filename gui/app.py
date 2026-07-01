@@ -171,8 +171,8 @@ class SecureAESGUI:
         self.enc_mode_combo.grid(row=row, column=1, sticky=tk.W, padx=5)
         row += 1
 
-        ttk.Label(left, text="密钥:").grid(row=row, column=0, sticky=tk.W, pady=4)
-        self.enc_key_var = tk.StringVar(value='(自动生成)')
+        ttk.Label(left, text="生成的密钥:").grid(row=row, column=0, sticky=tk.W, pady=4)
+        self.enc_key_var = tk.StringVar(value='(每次加密自动生成新密钥)')
         ttk.Label(left, textvariable=self.enc_key_var, foreground='#555').grid(
             row=row, column=1, columnspan=2, sticky=tk.W, padx=5)
         row += 1
@@ -286,8 +286,10 @@ class SecureAESGUI:
         self.enc_result_text.insert(tk.END, f"模式:     {result['mode']}\n")
         self.enc_result_text.insert(tk.END, f"密钥:     {self.current_key_name}\n")
 
-        # 加密完成后自动刷新解密密钥列表
+        # 加密完成后自动刷新解密密钥列表，并选中刚生成的密钥
         self._refresh_dec_keys()
+        if self.current_key_name:
+            self.dec_key_var.set(self.current_key_name)
 
     # ═══════════════════════════════════════
     #  选项卡2：文件解密
