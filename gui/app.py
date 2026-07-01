@@ -272,6 +272,7 @@ class SecureAESGUI:
         self.enc_result_text.insert(tk.END, f"原大小:   {result['original_size_fmt']}\n")
         self.enc_result_text.insert(tk.END, f"加密后:   {os.path.basename(result['output_file'])}\n")
         self.enc_result_text.insert(tk.END, f"加密大小: {result['encrypted_size_fmt']}\n")
+        self.enc_result_text.insert(tk.END, f"保存位置: {os.path.dirname(result['output_file'])}\n")
         self.enc_result_text.insert(tk.END, f"算法:     {result['algorithm']}\n")
         self.enc_result_text.insert(tk.END, f"模式:     {result['mode']}\n")
         self.enc_result_text.insert(tk.END, f"密钥:     {self.current_key_name}\n")
@@ -444,6 +445,7 @@ class SecureAESGUI:
         self.dec_result_text.insert(tk.END, f"密文大小:  {result['encrypted_size_fmt']}\n")
         self.dec_result_text.insert(tk.END, f"解密文件:  {os.path.basename(result['output_file'])}\n")
         self.dec_result_text.insert(tk.END, f"解密大小:  {result['decrypted_size_fmt']}\n")
+        self.dec_result_text.insert(tk.END, f"保存位置:  {os.path.dirname(result['output_file'])}\n")
         self.dec_result_text.insert(tk.END, f"算法:      {result['algorithm']}\n")
         self.dec_result_text.insert(tk.END, f"模式:      {result['mode']}\n")
 
