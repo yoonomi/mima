@@ -538,5 +538,185 @@
         ],
         "speedup_encrypt": 5.329916451534183,
         "speedup_decrypt": 6.1330679140342115
+    },
+    {
+        "timestamp": "2026-07-01 15:05:14",
+        "data_size": 303,
+        "aes_results": [
+            {
+                "algorithm": "AES",
+                "mode": "ECB",
+                "key_size": 128,
+                "data_size": 303,
+                "encrypt_time": 0.00011431002058088779,
+                "decrypt_time": 0.0006169899133965373,
+                "encrypt_speed": 2.527891399220055,
+                "decrypt_speed": 0.46834366591237614
+            },
+            {
+                "algorithm": "AES",
+                "mode": "CBC",
+                "key_size": 128,
+                "data_size": 303,
+                "encrypt_time": 0.0011121599469333886,
+                "decrypt_time": 0.000181390019133687,
+                "encrypt_speed": 0.259821726782974,
+                "decrypt_speed": 1.5930497127194396
+            },
+            {
+                "algorithm": "AES",
+                "mode": "CFB",
+                "key_size": 128,
+                "data_size": 303,
+                "encrypt_time": 4.559997469186783e-05,
+                "decrypt_time": 2.6659993454813958e-05,
+                "encrypt_speed": 6.3369183826022315,
+                "decrypt_speed": 10.838836789696062
+            },
+            {
+                "algorithm": "AES",
+                "mode": "OFB",
+                "key_size": 128,
+                "data_size": 303,
+                "encrypt_time": 2.183998003602028e-05,
+                "decrypt_time": 2.1239975467324257e-05,
+                "encrypt_speed": 13.23093324236157,
+                "decrypt_speed": 13.604691696355166
+            },
+            {
+                "algorithm": "AES",
+                "mode": "CTR",
+                "key_size": 128,
+                "data_size": 303,
+                "encrypt_time": 1.984001137316227e-05,
+                "decrypt_time": 1.5980005264282228e-05,
+                "encrypt_speed": 14.56467501132467,
+                "decrypt_speed": 18.082804923535992
+            },
+            {
+                "algorithm": "AES",
+                "mode": "ECB",
+                "key_size": 192,
+                "data_size": 303,
+                "encrypt_time": 3.060000017285347e-05,
+                "decrypt_time": 4.064005333930254e-05,
+                "encrypt_speed": 9.443245628718822,
+                "decrypt_speed": 7.1103085288434045
+            },
+            {
+                "algorithm": "AES",
+                "mode": "CBC",
+                "key_size": 192,
+                "data_size": 303,
+                "encrypt_time": 2.4129962548613547e-05,
+                "decrypt_time": 3.971999976783991e-05,
+                "encrypt_speed": 11.975290773408057,
+                "decrypt_speed": 7.275008045318738
+            },
+            {
+                "algorithm": "AES",
+                "mode": "CFB",
+                "key_size": 192,
+                "data_size": 303,
+                "encrypt_time": 7.018004544079304e-05,
+                "decrypt_time": 8.902999106794596e-05,
+                "encrypt_speed": 4.117456978777192,
+                "decrypt_speed": 3.2456851270552476
+            },
+            {
+                "algorithm": "AES",
+                "mode": "OFB",
+                "key_size": 192,
+                "data_size": 303,
+                "encrypt_time": 1.9049993716180326e-05,
+                "decrypt_time": 1.9330019131302834e-05,
+                "encrypt_speed": 15.168683107000687,
+                "decrypt_speed": 14.948941121488572
+            },
+            {
+                "algorithm": "AES",
+                "mode": "CTR",
+                "key_size": 192,
+                "data_size": 303,
+                "encrypt_time": 3.307000733911991e-05,
+                "decrypt_time": 1.9009970128536224e-05,
+                "encrypt_speed": 8.737927237447776,
+                "decrypt_speed": 15.200619249649712
+            },
+            {
+                "algorithm": "AES",
+                "mode": "ECB",
+                "key_size": 256,
+                "data_size": 303,
+                "encrypt_time": 1.800993923097849e-05,
+                "decrypt_time": 1.700997818261385e-05,
+                "encrypt_speed": 16.04465812822147,
+                "decrypt_speed": 16.987871164141023
+            },
+            {
+                "algorithm": "AES",
+                "mode": "CBC",
+                "key_size": 256,
+                "data_size": 303,
+                "encrypt_time": 1.847008243203163e-05,
+                "decrypt_time": 2.302001230418682e-05,
+                "encrypt_speed": 15.644939265130773,
+                "decrypt_speed": 12.552700409223407
+            },
+            {
+                "algorithm": "AES",
+                "mode": "CFB",
+                "key_size": 256,
+                "data_size": 303,
+                "encrypt_time": 5.235003773123026e-05,
+                "decrypt_time": 5.479000974446535e-05,
+                "encrypt_speed": 5.519830173851203,
+                "decrypt_speed": 5.274014719449536
+            },
+            {
+                "algorithm": "AES",
+                "mode": "OFB",
+                "key_size": 256,
+                "data_size": 303,
+                "encrypt_time": 3.418000414967537e-05,
+                "decrypt_time": 2.332995645701885e-05,
+                "encrypt_speed": 8.454162749826297,
+                "decrypt_speed": 12.3859347274589
+            },
+            {
+                "algorithm": "AES",
+                "mode": "CTR",
+                "key_size": 256,
+                "data_size": 303,
+                "encrypt_time": 2.2920011542737483e-05,
+                "decrypt_time": 1.6679964028298853e-05,
+                "encrypt_speed": 12.607468252460619,
+                "decrypt_speed": 17.323977280816976
+            }
+        ],
+        "des_results": [
+            {
+                "algorithm": "DES",
+                "mode": "ECB",
+                "key_size": 56,
+                "data_size": 303,
+                "encrypt_time": 5.959998816251755e-05,
+                "decrypt_time": 9.155001025646925e-05,
+                "encrypt_speed": 4.848378779592156,
+                "decrypt_speed": 3.156343915872741
+            },
+            {
+                "algorithm": "DES",
+                "mode": "CBC",
+                "key_size": 56,
+                "data_size": 303,
+                "encrypt_time": 0.0010216499911621213,
+                "decrypt_time": 0.00013055000454187393,
+                "encrypt_speed": 0.2828398378806812,
+                "decrypt_speed": 2.2134301632935505
+            }
+        ],
+        "speedup_encrypt": 3.4717748796618055,
+        "speedup_decrypt": 2.389859304571026
     }
 ]
