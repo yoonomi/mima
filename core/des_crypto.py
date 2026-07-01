@@ -91,7 +91,13 @@ def decrypt(ciphertext: bytes, key: bytes, mode: str = 'CBC', iv: bytes = None) 
             raise ValueError("CBC 模式需要提供 IV")
         cipher = DES.new(key, cipher_mode, iv=iv)
 
-    plaintext = unpad(cipher.decrypt(ciphertext), DES.block_size)
+    try:
+        plaintext = unpad(cipher.decrypt(ciphertext), DES.block_size)
+    except (ValueError, IndexError, TypeError) as e:
+        raise ValueError(
+            f"DES 解密失败：密钥不正确或数据已损坏 "
+            f"(填充校验错误: {e})"
+        ) from e
     return plaintext
 
 

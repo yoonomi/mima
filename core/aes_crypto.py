@@ -122,7 +122,13 @@ def decrypt(ciphertext: bytes, key: bytes, mode: str = 'CBC', iv: bytes = None) 
     if mode in ('CTR', 'CFB'):
         plaintext = cipher.decrypt(ciphertext)
     else:
-        plaintext = unpad(cipher.decrypt(ciphertext), AES.block_size)
+        try:
+            plaintext = unpad(cipher.decrypt(ciphertext), AES.block_size)
+        except (ValueError, IndexError, TypeError) as e:
+            raise ValueError(
+                f"AES 解密失败：密钥不正确或数据已损坏 "
+                f"(填充校验错误: {e})"
+            ) from e
 
     return plaintext
 

@@ -76,6 +76,10 @@ class SecureAESGUI:
         self.current_algorithm = 'AES'
         self.current_mode = 'CBC'
 
+        # 操作状态锁，防止重复点击
+        self._encrypting = False
+        self._decrypting = False
+
         # 构建界面
         self._build_header()
         self._build_notebook()
@@ -179,8 +183,9 @@ class SecureAESGUI:
                             value=ks).pack(side=tk.LEFT)
         row += 1
 
-        ttk.Button(left, text="开始加密", command=self._do_encrypt,
-                   style='Accent.TButton').grid(row=row, column=0, columnspan=3, pady=15)
+        self.encrypt_btn = ttk.Button(left, text="开始加密", command=self._do_encrypt,
+                                       style='Accent.TButton')
+        self.encrypt_btn.grid(row=row, column=0, columnspan=3, pady=15)
 
         # ── 右侧：结果 ──
         self.enc_result_text = scrolledtext.ScrolledText(right, width=45, height=22,
@@ -202,6 +207,10 @@ class SecureAESGUI:
 
     def _do_encrypt(self):
         """执行加密操作"""
+        if getattr(self, '_encrypting', False):
+            messagebox.showwarning("提示", "正在加密中，请等待当前操作完成")
+            return
+
         filepath = self.enc_file_var.get()
         if not filepath or not os.path.exists(filepath):
             messagebox.showerror("错误", "请选择有效的文件")
@@ -210,6 +219,11 @@ class SecureAESGUI:
         algo = self.enc_algo_var.get()
         mode = self.enc_mode_var.get()
         key_size = int(self.enc_keysize_var.get()) if algo == 'AES' else 56
+
+        self._encrypting = True
+        self.encrypt_btn.configure(state='disabled')
+        self.enc_result_text.delete(1.0, tk.END)
+        self.enc_result_text.insert(tk.END, "加密中，请稍候...\n")
 
         # 生成或使用已有密钥
         if algo == 'AES':
@@ -229,9 +243,20 @@ class SecureAESGUI:
                 self.root.after(0, lambda: self._show_encrypt_result(result))
             except Exception as e:
                 self.root.after(0, lambda: messagebox.showerror("加密失败", str(e)))
+                self.root.after(0, lambda: self.enc_result_text.insert(
+                    tk.END, f"\n[✗] 加密失败: {e}\n"))
+            finally:
+                self.root.after(0, lambda: self._reset_encrypt_state())
 
         Thread(target=task, daemon=True).start()
-        self.enc_result_text.insert(tk.END, "加密中，请稍候...\n")
+
+    def _reset_encrypt_state(self):
+        """重置加密状态"""
+        self._encrypting = False
+        try:
+            self.encrypt_btn.configure(state='normal')
+        except Exception:
+            pass
 
     def _show_encrypt_result(self, result):
         """显示加密结果"""
@@ -297,8 +322,9 @@ class SecureAESGUI:
         self.dec_key_combo.grid(row=row, column=1, columnspan=2, sticky=tk.W, padx=5)
         row += 1
 
-        ttk.Button(left, text="开始解密", command=self._do_decrypt,
-                   style='Accent.TButton').grid(row=row, column=0, columnspan=3, pady=15)
+        self.decrypt_btn = ttk.Button(left, text="开始解密", command=self._do_decrypt,
+                                       style='Accent.TButton')
+        self.decrypt_btn.grid(row=row, column=0, columnspan=3, pady=15)
 
         # 右侧
         self.dec_result_text = scrolledtext.ScrolledText(right, width=45, height=22,
@@ -315,6 +341,11 @@ class SecureAESGUI:
         return list(keys.keys()) if keys else ['(无可用密钥)']
 
     def _do_decrypt(self):
+        # 防止重复点击
+        if getattr(self, '_decrypting', False):
+            messagebox.showwarning("提示", "正在解密中，请等待当前操作完成")
+            return
+
         filepath = self.dec_file_var.get()
         if not filepath or not os.path.exists(filepath):
             messagebox.showerror("错误", "请选择有效的加密文件")
@@ -333,15 +364,45 @@ class SecureAESGUI:
             messagebox.showerror("错误", "密钥无效")
             return
 
+        self._decrypting = True
+        self.decrypt_btn.configure(state='disabled')
+        self.dec_result_text.delete(1.0, tk.END)
+        self.dec_result_text.insert(tk.END, "解密中，请稍候...\n")
+
         def task():
             try:
                 result = decrypt_single_file(filepath, key, algo, mode)
                 self.root.after(0, lambda: self._show_decrypt_result(result))
+            except ValueError as e:
+                # 密钥错误或数据损坏
+                self.root.after(0, lambda: messagebox.showerror(
+                    "解密失败",
+                    f"密钥不正确或数据已损坏！\n\n"
+                    f"可能原因：\n"
+                    f"1. 选择的密钥与加密时使用的密钥不一致\n"
+                    f"2. 加密模式不匹配（当前: {algo}-{mode}）\n"
+                    f"3. 文件已被篡改\n\n"
+                    f"详细错误: {e}"
+                ))
+                self.root.after(0, lambda: self.dec_result_text.insert(
+                    tk.END, f"\n[✗] 解密失败：密钥或模式不正确\n"))
             except Exception as e:
-                self.root.after(0, lambda: messagebox.showerror("解密失败", str(e)))
+                self.root.after(0, lambda: messagebox.showerror(
+                    "解密异常", f"解密过程发生异常:\n{e}"))
+                self.root.after(0, lambda: self.dec_result_text.insert(
+                    tk.END, f"\n[✗] 解密异常: {e}\n"))
+            finally:
+                self.root.after(0, lambda: self._reset_decrypt_state())
 
         Thread(target=task, daemon=True).start()
-        self.dec_result_text.insert(tk.END, "解密中，请稍候...\n")
+
+    def _reset_decrypt_state(self):
+        """重置解密状态"""
+        self._decrypting = False
+        try:
+            self.decrypt_btn.configure(state='normal')
+        except Exception:
+            pass
 
     def _show_decrypt_result(self, result):
         self.dec_result_text.delete(1.0, tk.END)
