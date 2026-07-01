@@ -823,13 +823,18 @@ def main():
 
 
 if __name__ == '__main__':
-    try:
-        main()
-    except KeyboardInterrupt:
-        print("\n\n程序已中断。")
-        sys.exit(0)
-    except Exception as e:
-        print(f"\n程序异常: {e}")
-        import traceback
-        traceback.print_exc()
-        sys.exit(1)
+    # PyInstaller 打包后直接启动 GUI
+    if getattr(sys, 'frozen', False):
+        from gui.app import launch_gui
+        launch_gui()
+    else:
+        try:
+            main()
+        except KeyboardInterrupt:
+            print("\n\n程序已中断。")
+            sys.exit(0)
+        except Exception as e:
+            print(f"\n程序异常: {e}")
+            import traceback
+            traceback.print_exc()
+            sys.exit(1)

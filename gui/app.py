@@ -5,6 +5,10 @@
 
 import os
 import sys
+
+# 强制 Matplotlib 使用 TkAgg 后端，必须在导入 matplotlib 之前设置
+os.environ.setdefault('MPLBACKEND', 'TkAgg')
+
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox, scrolledtext
 from tkinter.font import Font
@@ -460,9 +464,10 @@ class SecureAESGUI:
     def _init_matplotlib(self, parent):
         """初始化 Matplotlib 图表"""
         try:
+            import matplotlib
+            matplotlib.use('TkAgg')  # 强制使用 TkAgg 后端，避免打包 PyQt5
             from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
             from matplotlib.figure import Figure
-            import matplotlib
             matplotlib.rcParams['font.sans-serif'] = ['Microsoft YaHei', 'SimHei', 'DejaVu Sans']
             matplotlib.rcParams['axes.unicode_minus'] = False
 
